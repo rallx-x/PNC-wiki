@@ -61,6 +61,9 @@ const C = {
   quoteBar: "#999999",
   orange: "#ec9f19",
   iconBg: "#2b2b2b",
+  infoLabel: "#909090", // 나무위키 템플릿 정보 표 제목칸
+  infoText: "#373a3c",
+  infoLine: "#cccccc",
   white: "#ffffff",
 };
 
@@ -72,7 +75,7 @@ const S = {
   part: `box-sizing:border-box;background:${C.white};`,
 
   // 상단 카드 (이름 + 투영 이미지)
-  topCard: `box-sizing:border-box;margin:0 0 24px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.text};overflow:hidden;`,
+  topCard: `box-sizing:border-box;margin:0;border:1px solid ${C.cardBorder};background:${C.white};color:${C.text};overflow:hidden;`,
   topNameBox: `padding:14px 16px;background:${C.cardHead};text-align:center;`,
   topName: `margin:0 0 6px;font-size:24px;font-weight:700;line-height:1.3;color:${C.text};`,
   topNameSub: `margin:0;font-size:14px;color:${C.subText};`,
@@ -84,6 +87,17 @@ const S = {
   imageCaption: `padding:12px;background:${C.cardHead};border-top:1px solid ${C.border};color:${C.text};text-align:center;font-size:14px;font-weight:700;`,
   imageCaptionRight: `border-left:1px solid ${C.border};`,
   imageCaptionWide: `grid-column:1 / -1;`,
+
+  // 상단 정보 표 (div grid. 칸 사이 1px 선 = grid gap + 배경색)
+  info: `box-sizing:border-box;display:grid;grid-template-columns:20% 30% 20% 30%;gap:1px;margin:-1px 0 24px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
+  infoLabel: `display:flex;align-items:center;justify-content:center;padding:8px;background:${C.infoLabel};color:${C.white};font-weight:700;text-align:center;`,
+  infoValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;background:${C.white};color:${C.infoText};text-align:center;word-break:keep-all;`,
+  infoIcons: `display:flex;justify-content:center;gap:4px;`,
+  infoClassBadge: `display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;background:${C.iconBg};border-radius:6px;`,
+  infoClassImg: `display:block;width:42px;height:42px;margin:0;border:0;object-fit:contain;`,
+  infoCompanyBadge: `display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:80px;height:80px;padding:1px;border-radius:6px;`,
+  infoCompanyImg: `display:block;width:100%;height:100%;margin:0;border:0;object-fit:contain;`,
+  infoFlag: `display:inline-block;width:20px;height:14px;margin:0 6px 0 0;border:0;vertical-align:middle;object-fit:cover;`,
 
   // 인용문
   quote: `margin:0 0 24px;padding:14px 16px;border-left:4px solid ${C.quoteBar};background:transparent;color:${C.text};line-height:1.7;`,
@@ -170,18 +184,28 @@ function part(name, inner, extraStyle = "") {
 
 /* ---------- 문서 조각 ---------- */
 
+// 다국어명 칸. names의 키는 "언어", 국기는 그 언어를 나타내는 국가 이미지.
+const NAME_LANGS = [
+  { key: "cn", flag: "cn", placeholder: "중국어명" },
+  { key: "jp", flag: "jp", placeholder: "일본어명" },
+  { key: "en", flag: "us", placeholder: "영어명" },
+];
+
 function renderTopCard(state) {
   const p = state.profile;
   const flag = (key) => {
     const url = getIconUrl("country", key);
     return url ? img(url, getLabel("country", key), S.flag) : "";
   };
+  const names = NAME_LANGS.map(
+    (lang) => `${flag(lang.flag)}${esc(textOrDash(p.names[lang.key]))}`
+  ).join(" / ");
 
   return `
 <div class="pncwiki-top-card" style="${S.topCard}">
   <div style="${S.topNameBox}">
     <div style="${S.topName}">${esc(textOrDash(p.name))}</div>
-    <div style="${S.topNameSub}">${flag("cn")}{중국어명} / ${flag("jp")}{일본어명} / ${flag("us")}{영어명}</div>
+    <div style="${S.topNameSub}">${names}</div>
   </div>
   <div style="${S.imageGrid}">
     <div style="${S.imageSlot}${S.imageSlotLeft}">이미지 업로드 예정</div>
@@ -191,6 +215,60 @@ function renderTopCard(state) {
     <div style="${S.imageSlot}${S.imageSlotWide}">이미지 업로드 예정</div>
     <div style="${S.imageCaption}${S.imageCaptionWide}">완벽 투영</div>
   </div>
+</div>`;
+}
+
+/* 상단 정보 표 (data-part="info") */
+
+function infoBadge(category, key, badgeStyle, imgStyle, bg) {
+  const url = getIconUrl(category, key);
+  if (!url) return "";
+  return `<span style="${badgeStyle}${bg ? `background:${bg};` : ""}">${img(url, getLabel(category, key), imgStyle)}</span>`;
+}
+
+function infoClassCell(p) {
+  const icons =
+    infoBadge("class", p.class, S.infoClassBadge, S.infoClassImg) +
+    infoBadge("position", p.position, S.infoClassBadge, S.infoClassImg);
+  const text = [getLabel("class", p.class), getLabel("position", p.position)]
+    .filter(Boolean)
+    .map(esc)
+    .join(" | ");
+  return `${icons ? `<div style="${S.infoIcons}">${icons}</div>` : ""}<div>${text || "-"}</div>`;
+}
+
+function infoCompanyCell(p) {
+  const item = getItem("company", p.company);
+  if (!item) return "-";
+  const badge = infoBadge("company", p.company, S.infoCompanyBadge, S.infoCompanyImg, item.color || C.infoLabel);
+  return `${badge}<div>${esc(getFullLabel("company", p.company))}</div>`;
+}
+
+function infoRarity(p) {
+  return p.rarity ? `★${esc(p.rarity)}` : "-";
+}
+
+function infoVoice(p) {
+  const v = p.voiceActor;
+  const name = String(v.name || "").trim();
+  if (!name) return "-";
+  const url = getIconUrl("country", v.country);
+  const flag = url ? img(url, getLabel("country", v.country), S.infoFlag) : "";
+  return `<div>${flag}${esc(name)}</div>`;
+}
+
+function renderInfo(state) {
+  const p = state.profile;
+  const row = (label1, value1, label2, value2) => `
+    <div style="${S.infoLabel}">${label1}</div><div style="${S.infoValue}">${value1}</div>
+    <div style="${S.infoLabel}">${label2}</div><div style="${S.infoValue}">${value2}</div>`;
+
+  return `
+<div class="pncwiki-info" style="${S.info}">
+  ${row("클래스", infoClassCell(p), "기업", infoCompanyCell(p))}
+  ${row("레어도", infoRarity(p), "모델명", esc(textOrDash(p.model)))}
+  ${row("직업", esc(textOrDash(p.job)), "생일", esc(textOrDash(formatBirthday(p.birthday))))}
+  ${row("성우", infoVoice(p), "일러스트", esc(textOrDash(p.illustrator)))}
 </div>`;
 }
 
@@ -272,6 +350,7 @@ function renderDocument(state) {
 
   return `<div class="pncwiki-doc" style="${S.root}">
 ${part("top", renderTopCard(state))}
+${part("info", renderInfo(state))}
 ${part("quote", renderQuote(state))}
 ${part("toc", renderToc(sections))}
 ${sections.map((section) => renderSection(state, section)).join("\n")}

@@ -47,6 +47,17 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="dollNameCn">중국어명</label>
+                    <input id="dollNameCn" type="text" data-field="profile.names.cn" />
+
+                    <label for="dollNameJp" class="sub-label">일본어명</label>
+                    <input id="dollNameJp" type="text" data-field="profile.names.jp" />
+
+                    <label for="dollNameEn" class="sub-label">영어명</label>
+                    <input id="dollNameEn" type="text" data-field="profile.names.en" />
+                </div>
+
+                <div class="form-group">
                     <label for="dollJob">직업</label>
                     <input id="dollJob" type="text" data-field="profile.job" />
                 </div>
@@ -132,6 +143,32 @@
                 </div>
 
                 <div class="form-group">
+                    <label>포지션</label>
+                    <!-- 선택지는 GAME_DATA.position으로 자동 생성 -->
+                    <div class="checkbox-grid radio-grid" data-options="position" data-options-field="profile.position"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>레어도</label>
+                    <div class="checkbox-grid radio-grid rarity-grid">
+                        <label>
+                            <input type="radio" name="profile.rarity" data-field="profile.rarity" value="1" />
+                            ★1
+                        </label>
+
+                        <label>
+                            <input type="radio" name="profile.rarity" data-field="profile.rarity" value="2" />
+                            ★2
+                        </label>
+
+                        <label>
+                            <input type="radio" name="profile.rarity" data-field="profile.rarity" value="3" />
+                            ★3
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>생일</label>
 
                     <div class="birthday-select-row">
@@ -161,6 +198,20 @@
                         <input type="checkbox" id="dollBirthdayUnknown" data-field="profile.birthday.unknown" />
                         불명
                     </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="dollVoiceName">성우</label>
+                    <input id="dollVoiceName" type="text" data-field="profile.voiceActor.name" />
+
+                    <label class="sub-label">성우 국가</label>
+                    <!-- 선택지는 GAME_DATA.country로 자동 생성 -->
+                    <div class="checkbox-grid radio-grid" data-options="country" data-options-field="profile.voiceActor.country"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dollIllustrator">일러스트</label>
+                    <input id="dollIllustrator" type="text" data-field="profile.illustrator" />
                 </div>
 
                 <div class="form-group">

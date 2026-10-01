@@ -21,15 +21,27 @@ const STORAGE_KEY = "pnc_wiki_generator_autosave";
 const DEFAULT_STATE = {
   profile: {
     name: "",
+    names: {
+      cn: "", // 중국어명
+      jp: "", // 일본어명
+      en: "", // 영어명  (※ 언어 키. 성우 국가 키와 별개)
+    },
     job: "",
     model: "",
     company: "", // GAME_DATA.company 키
     class: "", // GAME_DATA.class 키
+    position: "", // GAME_DATA.position 키
+    rarity: "", // "1" | "2" | "3"
     birthday: {
       month: "", // "1" ~ "12"
       day: "", // "1" ~ "31"
       unknown: false,
     },
+    voiceActor: {
+      name: "",
+      country: "", // GAME_DATA.country 키 (jp / kr / cn / us)
+    },
+    illustrator: "",
     history: "",
   },
   overview: {
@@ -281,6 +293,28 @@ function buildBirthdayDayOptions() {
   }
 }
 
+// GAME_DATA로 선택지 만들기: <div data-options="position" data-options-field="profile.position">
+// 화면에 보이는 이름은 GAME_DATA label, 저장되는 값은 키
+function buildOptionGroups() {
+  document.querySelectorAll("[data-options]").forEach((box) => {
+    const category = box.dataset.options;
+    const field = box.dataset.optionsField;
+
+    box.innerHTML = "";
+    Object.entries(GAME_DATA[category] || {}).forEach(([key, item]) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = field;
+      input.value = key;
+      input.dataset.field = field;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(` ${item.label}`));
+      box.appendChild(label);
+    });
+  });
+}
+
 // state → 폼 (불러오기·초기화·새로고침 때)
 function fillForm() {
   buildBirthdayDayOptions();
@@ -379,5 +413,6 @@ document.getElementById("loadJsonInput").addEventListener("change", (event) => {
   event.target.value = "";
 });
 
+buildOptionGroups();
 loadFromLocalStorage();
 refreshAll();

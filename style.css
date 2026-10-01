@@ -252,6 +252,14 @@ body {
   border-color: var(--accent);
 }
 
+.form-group .sub-label {
+  margin-top: 16px;
+}
+
+.rarity-grid {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .form-group textarea {
   resize: vertical;
   min-height: 120px;
