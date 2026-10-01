@@ -56,7 +56,6 @@ const SECTION_DEFS = [
   { key: "relationship", title: "인형 관계", fixed: true },
   { key: "voice", title: "대사", fixed: true },
   { key: "etc", title: "기타", fixed: true },
-  { key: "navigation", title: "둘러보기", fixed: true },
 ];
 
 let state = cloneDefaults();
@@ -373,6 +372,31 @@ function getBirthdayText(birthday) {
   return [month, day].filter(Boolean).join(" ");
 }
 
+// 아이콘 + 이름 표시. 아이콘이 없으면 이름만.
+// (로고가 흰색이라 어두운 배경 위에 올림)
+function renderIconValue(target, category, key) {
+  const label = getLabel(category, key);
+  const iconUrl = getIconUrl(category, key);
+
+  target.textContent = "";
+
+  if (iconUrl) {
+    const badge = document.createElement("span");
+    badge.style.cssText =
+      "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:8px;background:#2b2b2b;border-radius:4px;vertical-align:middle;";
+
+    const img = document.createElement("img");
+    img.src = iconUrl;
+    img.alt = label;
+    img.style.cssText = "width:24px;height:24px;object-fit:contain;";
+
+    badge.appendChild(img);
+    target.appendChild(badge);
+  }
+
+  target.appendChild(document.createTextNode(valueOrDash(label)));
+}
+
 function renderProfile() {
   const p = state.profile;
   const name = valueOrDash(p.name);
@@ -381,7 +405,7 @@ function renderProfile() {
   preview.topName.textContent = name;
   preview.job.textContent = valueOrDash(p.job);
   preview.model.textContent = valueOrDash(p.model);
-  preview.company.textContent = valueOrDash(getLabel("company", p.company));
+  renderIconValue(preview.company, "company", p.company);
   preview.classType.textContent = valueOrDash(getLabel("class", p.class));
   preview.birthday.textContent = valueOrDash(getBirthdayText(p.birthday));
   preview.history.textContent = valueOrDash(p.history);

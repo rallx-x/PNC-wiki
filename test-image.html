@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>이미지 시험 페이지</title>
+    <!-- 화면을 이미지로 바꿔주는 도구 (생성기 본체에도 나중에 같은 걸 씀) -->
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 32px;
+            background: #f4f5f7;
+            color: #222;
+            font-family: "Pretendard", "Malgun Gothic", sans-serif;
+            line-height: 1.6;
+        }
+
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .step {
+            margin-bottom: 24px;
+            padding: 20px 24px;
+            background: #fff;
+            border: 1px solid #d8dde5;
+            border-radius: 8px;
+        }
+
+        .step h2 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .step p {
+            margin: 0 0 12px;
+            color: #555;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #ec9f19;
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 12px;
+            font-weight: 700;
+        }
+
+        .ok { color: #1f8a4c; }
+        .bad { color: #c62828; }
+
+        #captureResult img {
+            display: block;
+            margin-top: 12px;
+            max-width: 100%;
+            border: 1px dashed #999;
+        }
+
+        textarea {
+            width: 100%;
+            height: 160px;
+            box-sizing: border-box;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>이미지 시험 페이지</h1>
+        <p>이미지를 깃허브에 올려두고 써도 괜찮은지 확인하는 페이지예요. 위에서부터 순서대로 해보세요.</p>
+
+        <section class="step">
+            <h2>1. 이미지가 보이나요?</h2>
+            <p>아래 어두운 상자 안에 42LAB 로고가 보이면 성공이에요.</p>
+
+            <!-- 이 상자가 그대로 이미지로 저장됨 -->
+            <div id="captureBox"
+                style="display:flex;align-items:center;gap:16px;width:360px;padding:16px;background:#2b2b2b;color:#fff;font-family:'Malgun Gothic',sans-serif;">
+                <img id="testLogo" src="https://rallx-x.github.io/PNC-wiki/assets/company/42lab.png" alt="42LAB"
+                    crossorigin="anonymous" style="width:72px;height:72px;object-fit:contain;" />
+                <div>
+                    <div style="font-size:18px;font-weight:700;">42LAB</div>
+                    <div style="font-size:13px;color:#ec9f19;">이미지 저장 시험용 상자</div>
+                </div>
+            </div>
+
+            <div class="result" id="loadResult">확인 중...</div>
+        </section>
+
+        <section class="step">
+            <h2>2. 이미지로 저장이 되나요?</h2>
+            <p>버튼을 누르면 위 상자를 PNG 이미지로 만들어요. 아래에 나온 결과 그림에 <b>로고까지 같이 찍혀 있으면</b> 성공이에요.</p>
+            <button type="button" id="captureButton">PNG로 저장해보기</button>
+            <div class="result" id="captureResult"></div>
+        </section>
+
+        <section class="step">
+            <h2>3. 티스토리에서도 보이나요?</h2>
+            <p>
+                아래 코드를 복사해서 티스토리 <b>비공개 글</b>을 하나 만들고,
+                글쓰기 화면 오른쪽 위 <b>기본모드 → HTML</b>로 바꾼 뒤 붙여넣어 보세요.
+                저장 후 글을 열었을 때 어두운 상자와 로고가 보이면 성공이에요.
+            </p>
+            <textarea id="tistoryCode" readonly></textarea>
+            <button type="button" id="copyButton">코드 복사</button>
+            <span class="result" id="copyResult"></span>
+        </section>
+    </main>
+
+    <script>
+        const box = document.getElementById("captureBox");
+        const logo = document.getElementById("testLogo");
+        const loadResult = document.getElementById("loadResult");
+        const captureResult = document.getElementById("captureResult");
+
+        // 1. 이미지 표시 확인
+        function showLoad(ok) {
+            loadResult.className = "result " + (ok ? "ok" : "bad");
+            loadResult.textContent = ok
+                ? "✔ 이미지가 잘 불러와졌어요."
+                : "✘ 이미지를 불러오지 못했어요. 깃허브에 올라간 지 얼마 안 됐다면 1~2분 뒤 새로고침해 보세요.";
+        }
+        if (logo.complete) {
+            showLoad(logo.naturalWidth > 0);
+        } else {
+            logo.addEventListener("load", () => showLoad(true));
+            logo.addEventListener("error", () => showLoad(false));
+        }
+
+        // 2. 이미지 저장 확인
+        document.getElementById("captureButton").addEventListener("click", async () => {
+            captureResult.className = "result";
+            captureResult.textContent = "만드는 중...";
+
+            try {
+                const dataUrl = await htmlToImage.toPng(box, { pixelRatio: 2 });
+
+                const a = document.createElement("a");
+                a.href = dataUrl;
+                a.download = "이미지_시험.png";
+                a.click();
+
+                captureResult.className = "result ok";
+                captureResult.textContent = "✔ 이미지가 만들어졌어요. 아래 그림에 로고가 있는지 확인해 주세요.";
+                const img = document.createElement("img");
+                img.src = dataUrl;
+                captureResult.appendChild(img);
+            } catch (error) {
+                captureResult.className = "result bad";
+                captureResult.textContent = "✘ 이미지 만들기에 실패했어요: " + (error && error.message ? error.message : error);
+            }
+        });
+
+        // 3. 티스토리용 코드 (생성기 최종 출력과 같은 방식: 스타일을 태그 안에 직접 넣음)
+        const tistoryCode =
+            '<div style="display:flex;align-items:center;gap:16px;max-width:360px;padding:16px;background:#2b2b2b;color:#fff;font-family:\'Malgun Gothic\',sans-serif;line-height:1.6;">\n' +
+            '  <img src="https://rallx-x.github.io/PNC-wiki/assets/company/42lab.png" alt="42LAB" style="width:72px;height:72px;object-fit:contain;margin:0;" />\n' +
+            '  <div>\n' +
+            '    <div style="font-size:18px;font-weight:700;color:#fff;">42LAB</div>\n' +
+            '    <div style="font-size:13px;color:#ec9f19;">티스토리 표시 시험용 상자</div>\n' +
+            '  </div>\n' +
+            '</div>';
+
+        document.getElementById("tistoryCode").value = tistoryCode;
+
+        document.getElementById("copyButton").addEventListener("click", async () => {
+            const copyResult = document.getElementById("copyResult");
+            try {
+                await navigator.clipboard.writeText(tistoryCode);
+                copyResult.className = "result ok";
+                copyResult.textContent = " ✔ 복사됐어요!";
+            } catch {
+                document.getElementById("tistoryCode").select();
+                copyResult.className = "result bad";
+                copyResult.textContent = " 자동 복사가 안 돼서 코드를 선택해 뒀어요. Ctrl+C를 눌러주세요.";
+            }
+        });
+    </script>
+</body>
+
+</html>
