@@ -33,7 +33,7 @@
         </header>
 
         <main class="workspace">
-            <section class="editor-panel">
+            <section class="editor-panel" id="editorPanel">
                 <div class="panel-header">
                     <h2>입력</h2>
                     <span>Phase 1</span>
@@ -43,44 +43,44 @@
 
                 <div class="form-group">
                     <label for="dollName">이름</label>
-                    <input id="dollName" type="text" />
+                    <input id="dollName" type="text" data-field="profile.name" />
                 </div>
 
                 <div class="form-group">
                     <label for="dollJob">직업</label>
-                    <input id="dollJob" type="text" />
+                    <input id="dollJob" type="text" data-field="profile.job" />
                 </div>
 
                 <div class="form-group">
                     <label for="dollModel">모델</label>
-                    <input id="dollModel" type="text" />
+                    <input id="dollModel" type="text" data-field="profile.model" />
                 </div>
 
                 <div class="form-group">
                     <label>기업</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
-                            <input type="radio" name="dollCompany" value="42LAB" />
+                            <input type="radio" name="profile.company" data-field="profile.company" value="42lab" />
                             42LAB
                         </label>
 
                         <label>
-                            <input type="radio" name="dollCompany" value="스바로그" />
+                            <input type="radio" name="profile.company" data-field="profile.company" value="svarog" />
                             스바로그
                         </label>
 
                         <label>
-                            <input type="radio" name="dollCompany" value="얼티라이프" />
+                            <input type="radio" name="profile.company" data-field="profile.company" value="ultimatelife" />
                             얼티라이프
                         </label>
 
                         <label>
-                            <input type="radio" name="dollCompany" value="UAS" />
+                            <input type="radio" name="profile.company" data-field="profile.company" value="uas" />
                             UAS
                         </label>
 
                         <label>
-                            <input type="radio" name="dollCompany" value="사이버미디어" />
+                            <input type="radio" name="profile.company" data-field="profile.company" value="cybermedia" />
                             사이버미디어
                         </label>
                     </div>
@@ -90,27 +90,27 @@
                     <label>클래스</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
-                            <input type="radio" name="dollClass" value="수위" />
+                            <input type="radio" name="profile.class" data-field="profile.class" value="guard" />
                             수위
                         </label>
 
                         <label>
-                            <input type="radio" name="dollClass" value="전사" />
+                            <input type="radio" name="profile.class" data-field="profile.class" value="warrior" />
                             전사
                         </label>
 
                         <label>
-                            <input type="radio" name="dollClass" value="해결사" />
+                            <input type="radio" name="profile.class" data-field="profile.class" value="specialist" />
                             해결사
                         </label>
 
                         <label>
-                            <input type="radio" name="dollClass" value="치료사" />
+                            <input type="radio" name="profile.class" data-field="profile.class" value="medic" />
                             치료사
                         </label>
 
                         <label>
-                            <input type="radio" name="dollClass" value="사수" />
+                            <input type="radio" name="profile.class" data-field="profile.class" value="sniper" />
                             사수
                         </label>
                     </div>
@@ -120,74 +120,44 @@
                     <label>생일</label>
 
                     <div class="birthday-select-row">
-                        <select id="dollBirthdayMonth">
+                        <select id="dollBirthdayMonth" data-field="profile.birthday.month">
                             <option value="">- 월</option>
-                            <option value="1월">1월</option>
-                            <option value="2월">2월</option>
-                            <option value="3월">3월</option>
-                            <option value="4월">4월</option>
-                            <option value="5월">5월</option>
-                            <option value="6월">6월</option>
-                            <option value="7월">7월</option>
-                            <option value="8월">8월</option>
-                            <option value="9월">9월</option>
-                            <option value="10월">10월</option>
-                            <option value="11월">11월</option>
-                            <option value="12월">12월</option>
+                            <option value="1">1월</option>
+                            <option value="2">2월</option>
+                            <option value="3">3월</option>
+                            <option value="4">4월</option>
+                            <option value="5">5월</option>
+                            <option value="6">6월</option>
+                            <option value="7">7월</option>
+                            <option value="8">8월</option>
+                            <option value="9">9월</option>
+                            <option value="10">10월</option>
+                            <option value="11">11월</option>
+                            <option value="12">12월</option>
                         </select>
 
-                        <select id="dollBirthdayDay">
+                        <!-- 일 목록은 월에 맞춰 script.js가 자동으로 채움 -->
+                        <select id="dollBirthdayDay" data-field="profile.birthday.day">
                             <option value="">- 일</option>
-                            <option value="1일">1일</option>
-                            <option value="2일">2일</option>
-                            <option value="3일">3일</option>
-                            <option value="4일">4일</option>
-                            <option value="5일">5일</option>
-                            <option value="6일">6일</option>
-                            <option value="7일">7일</option>
-                            <option value="8일">8일</option>
-                            <option value="9일">9일</option>
-                            <option value="10일">10일</option>
-                            <option value="11일">11일</option>
-                            <option value="12일">12일</option>
-                            <option value="13일">13일</option>
-                            <option value="14일">14일</option>
-                            <option value="15일">15일</option>
-                            <option value="16일">16일</option>
-                            <option value="17일">17일</option>
-                            <option value="18일">18일</option>
-                            <option value="19일">19일</option>
-                            <option value="20일">20일</option>
-                            <option value="21일">21일</option>
-                            <option value="22일">22일</option>
-                            <option value="23일">23일</option>
-                            <option value="24일">24일</option>
-                            <option value="25일">25일</option>
-                            <option value="26일">26일</option>
-                            <option value="27일">27일</option>
-                            <option value="28일">28일</option>
-                            <option value="29일">29일</option>
-                            <option value="30일">30일</option>
-                            <option value="31일">31일</option>
                         </select>
                     </div>
 
                     <label class="birthday-unknown">
-                        <input type="checkbox" id="dollBirthdayUnknown" />
+                        <input type="checkbox" id="dollBirthdayUnknown" data-field="profile.birthday.unknown" />
                         불명
                     </label>
                 </div>
 
                 <div class="form-group">
                     <label for="dollHistory">이력</label>
-                    <textarea id="dollHistory" rows="4"></textarea>
+                    <textarea id="dollHistory" rows="4" data-field="profile.history"></textarea>
                 </div>
 
                 <div class="form-section-title">개요</div>
 
                 <div class="form-group">
                     <label for="dollQuote">인용문</label>
-                    <textarea id="dollQuote" rows="4"></textarea>
+                    <textarea id="dollQuote" rows="4" data-field="overview.quote"></textarea>
                 </div>
 
                 <div class="form-section-title">문단 설정</div>
@@ -210,7 +180,7 @@
                         </label>
 
                         <label>
-                            <input type="checkbox" data-subsection="weapon" checked />
+                            <input type="checkbox" data-field="sections.weapon" />
                             무장각인
                         </label>
 
@@ -225,12 +195,12 @@
                         </label>
 
                         <label>
-                            <input type="checkbox" data-section="story" checked />
+                            <input type="checkbox" data-field="sections.story" />
                             스토리
                         </label>
 
                         <label>
-                            <input type="checkbox" data-section="appearance" checked />
+                            <input type="checkbox" data-field="sections.appearance" />
                             작중 행적
                         </label>
 
@@ -474,6 +444,7 @@
         </main>
     </div>
 
+    <script src="./data/game-data.js"></script>
     <script src="./script.js"></script>
 </body>
 
