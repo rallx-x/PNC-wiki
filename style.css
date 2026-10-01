@@ -1,0 +1,547 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-soft: #f0f2f5;
+  --border: #d8dde5;
+  --text: #222222;
+  --sub-text: #666666;
+  --accent: #6b6ade;
+  --pnc-orange: #ec9f19;
+  --wiki-card-bg: #ffffff;
+  --wiki-card-head: #f0f2f5;
+  --wiki-card-border: #505050;
+  --wiki-card-text: #222222;
+  --wiki-card-sub-text: #666666;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.app-header p {
+  color: var(--sub-text);
+}
+
+.header-button {
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-button.danger {
+  background: #8b3a3a;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.editor-panel,
+.preview-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  background: var(--panel-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h2 {
+  font-size: 18px;
+}
+
+.panel-header span {
+  color: var(--sub-text);
+  font-size: 14px;
+}
+
+.form-section-title {
+  padding: 14px 22px;
+  background: #f7f8fa;
+  border-bottom: 1px solid var(--border);
+  color: var(--sub-text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.editor-panel {
+  position: sticky;
+  top: 24px;
+}
+
+.form-group {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.form-group select {
+  width: 100%;
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.birthday-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.birthday-select-row select {
+  appearance: auto;
+}
+
+.birthday-select-row select:disabled {
+  background: #f0f2f5;
+  color: var(--sub-text);
+}
+
+.birthday-unknown {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.birthday-unknown input {
+  width: auto;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+
+.checkbox-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.checkbox-grid input {
+  width: auto;
+}
+
+.section-toggle-grid label {
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.section-toggle-grid input {
+  accent-color: var(--accent);
+}
+
+.section-toggle-grid label:has(input:checked) {
+  border-color: var(--accent);
+  background: #f0efff;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.section-toggle-grid label:has(input:disabled) {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.radio-grid label {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.radio-grid input {
+  accent-color: var(--accent);
+}
+
+.radio-grid label:has(input:checked) {
+  border-color: var(--accent);
+  background: #f0efff;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.radio-grid label:hover {
+  border-color: var(--accent);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.wiki-preview {
+  padding: 24px;
+}
+
+.top-profile-card {
+  overflow: hidden;
+  border: 1px solid var(--wiki-card-border);
+  margin-bottom: 24px;
+  background: var(--wiki-card-bg);
+  color: var(--wiki-card-text);
+}
+
+.top-profile-name {
+  padding: 14px 16px;
+  background: var(--wiki-card-head);
+  color: var(--wiki-card-text);
+  text-align: center;
+}
+
+.top-profile-name h2 {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+.top-profile-name p {
+  color: var(--wiki-card-sub-text);
+  font-size: 14px;
+}
+
+.top-image-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--border);
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  border-right: 1px solid var(--border);
+  background: #f7f8fa;
+  color: var(--sub-text);
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.image-slot:nth-child(2) {
+  border-right: none;
+}
+
+.image-caption {
+  padding: 12px;
+  background: var(--wiki-card-head);
+  border-top: 1px solid var(--border);
+  color: var(--wiki-card-text);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.image-caption:nth-child(4) {
+  border-left: 1px solid var(--border);
+}
+
+.image-slot-wide {
+  grid-column: 1 / -1;
+  min-height: 340px;
+  border-top: 1px solid var(--border);
+  border-right: none;
+}
+
+.image-caption-wide {
+  grid-column: 1 / -1;
+}
+
+.top-quote {
+  border-left: 4px solid #999999;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  background: transparent;
+  white-space: pre-line;
+  line-height: 1.7;
+}
+
+.wiki-toc {
+  width: fit-content;
+  min-width: 240px;
+  margin-bottom: 28px;
+  background: #ffffff;
+}
+
+.toc-toggle-button {
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid var(--border);
+  background: #f7f8fa;
+  color: var(--text);
+  padding: 14px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.toc-content {
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 14px 18px 16px;
+}
+
+.toc-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+  color: var(--sub-text);
+  font-size: 14px;
+}
+
+.toc-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.toc-content {
+  padding: 14px 18px 16px;
+}
+
+.wiki-toc.is-collapsed .toc-content {
+  display: none;
+}
+
+.wiki-toc ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.wiki-toc li {
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
+.wiki-toc a {
+  color: var(--pnc-orange);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wiki-toc a:hover {
+  text-decoration: underline;
+}
+
+.profile-card {
+  overflow: hidden;
+  border: 1px solid var(--wiki-card-border);
+  border-radius: 0;
+  margin-bottom: 28px;
+  background: var(--wiki-card-bg);
+  padding-bottom: 16px;
+}
+
+.profile-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--wiki-card-head);
+  color: var(--wiki-card-text);
+}
+
+.profile-title span,
+.profile-title strong {
+  color: inherit;
+}
+
+.profile-title strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 16px 16px 0;
+}
+
+.profile-item {
+  display: flex;
+}
+
+.profile-label {
+  width: 64px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  background: #eceff3;
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-value {
+  flex: 1;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #d8dde5;
+  border-left: none;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.profile-history-label {
+  margin: 18px 16px 0;
+  padding: 10px 14px;
+  background: #eceff3;
+  font-weight: 700;
+}
+
+.profile-history-value {
+  margin: 0 16px;
+  padding: 16px;
+  background: #f7f8fa;
+  line-height: 1.8;
+  white-space: pre-line;
+  word-break: keep-all;
+}
+
+.wiki-section {
+  scroll-margin-top: 24px;
+  margin-bottom: 36px;
+}
+
+.wiki-section h2 {
+  position: relative;
+  font-size: 28px;
+  margin-bottom: 20px;
+  padding: 0 0 8px 28px;
+  border-bottom: 1px solid #cccccc;
+  color: var(--text);
+}
+
+.wiki-section h2::before {
+  content: "▽";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  color: var(--sub-text);
+  font-size: 16px;
+}
+
+.wiki-section h2 .section-number {
+  color: var(--pnc-orange);
+}
+
+.wiki-section blockquote {
+  border-left: 4px solid #999999;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: transparent;
+  white-space: pre-line;
+}
+
+.wiki-section p {
+  line-height: 1.8;
+}
+
+.pnc-color {
+  color: var(--pnc-orange);
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-panel {
+    position: static;
+  }
+}

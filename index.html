@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>뉴럴 클라우드 인형 위키 HTML 생성기</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+    <div class="app">
+        <header class="app-header">
+            <div>
+                <h1>뉴럴 클라우드 인형 위키 HTML 생성기</h1>
+                <p>정보를 입력하면 티스토리용 위키 HTML을 생성합니다.</p>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" class="header-button" id="saveJsonButton">
+                    JSON 저장
+                </button>
+
+                <label class="header-button file-button" for="loadJsonInput">
+                    JSON 불러오기
+                </label>
+                <input id="loadJsonInput" type="file" accept=".json" hidden />
+
+                <button type="button" class="header-button danger" id="resetButton">
+                    초기화
+                </button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <section class="editor-panel">
+                <div class="panel-header">
+                    <h2>입력</h2>
+                    <span>Phase 1</span>
+                </div>
+
+                <div class="form-section-title">프로필</div>
+
+                <div class="form-group">
+                    <label for="dollName">이름</label>
+                    <input id="dollName" type="text" />
+                </div>
+
+                <div class="form-group">
+                    <label for="dollJob">직업</label>
+                    <input id="dollJob" type="text" />
+                </div>
+
+                <div class="form-group">
+                    <label for="dollModel">모델</label>
+                    <input id="dollModel" type="text" />
+                </div>
+
+                <div class="form-group">
+                    <label>기업</label>
+                    <div class="checkbox-grid radio-grid">
+                        <label>
+                            <input type="radio" name="dollCompany" value="42LAB" />
+                            42LAB
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollCompany" value="스바로그" />
+                            스바로그
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollCompany" value="얼티라이프" />
+                            얼티라이프
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollCompany" value="UAS" />
+                            UAS
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollCompany" value="사이버미디어" />
+                            사이버미디어
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>클래스</label>
+                    <div class="checkbox-grid radio-grid">
+                        <label>
+                            <input type="radio" name="dollClass" value="수위" />
+                            수위
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollClass" value="전사" />
+                            전사
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollClass" value="해결사" />
+                            해결사
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollClass" value="치료사" />
+                            치료사
+                        </label>
+
+                        <label>
+                            <input type="radio" name="dollClass" value="사수" />
+                            사수
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>생일</label>
+
+                    <div class="birthday-select-row">
+                        <select id="dollBirthdayMonth">
+                            <option value="">- 월</option>
+                            <option value="1월">1월</option>
+                            <option value="2월">2월</option>
+                            <option value="3월">3월</option>
+                            <option value="4월">4월</option>
+                            <option value="5월">5월</option>
+                            <option value="6월">6월</option>
+                            <option value="7월">7월</option>
+                            <option value="8월">8월</option>
+                            <option value="9월">9월</option>
+                            <option value="10월">10월</option>
+                            <option value="11월">11월</option>
+                            <option value="12월">12월</option>
+                        </select>
+
+                        <select id="dollBirthdayDay">
+                            <option value="">- 일</option>
+                            <option value="1일">1일</option>
+                            <option value="2일">2일</option>
+                            <option value="3일">3일</option>
+                            <option value="4일">4일</option>
+                            <option value="5일">5일</option>
+                            <option value="6일">6일</option>
+                            <option value="7일">7일</option>
+                            <option value="8일">8일</option>
+                            <option value="9일">9일</option>
+                            <option value="10일">10일</option>
+                            <option value="11일">11일</option>
+                            <option value="12일">12일</option>
+                            <option value="13일">13일</option>
+                            <option value="14일">14일</option>
+                            <option value="15일">15일</option>
+                            <option value="16일">16일</option>
+                            <option value="17일">17일</option>
+                            <option value="18일">18일</option>
+                            <option value="19일">19일</option>
+                            <option value="20일">20일</option>
+                            <option value="21일">21일</option>
+                            <option value="22일">22일</option>
+                            <option value="23일">23일</option>
+                            <option value="24일">24일</option>
+                            <option value="25일">25일</option>
+                            <option value="26일">26일</option>
+                            <option value="27일">27일</option>
+                            <option value="28일">28일</option>
+                            <option value="29일">29일</option>
+                            <option value="30일">30일</option>
+                            <option value="31일">31일</option>
+                        </select>
+                    </div>
+
+                    <label class="birthday-unknown">
+                        <input type="checkbox" id="dollBirthdayUnknown" />
+                        불명
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="dollHistory">이력</label>
+                    <textarea id="dollHistory" rows="4"></textarea>
+                </div>
+
+                <div class="form-section-title">개요</div>
+
+                <div class="form-group">
+                    <label for="dollQuote">인용문</label>
+                    <textarea id="dollQuote" rows="4"></textarea>
+                </div>
+
+                <div class="form-section-title">문단 설정</div>
+
+                <div class="form-group">
+                    <div class="checkbox-grid section-toggle-grid">
+                        <label>
+                            <input type="checkbox" data-section="overview" checked disabled />
+                            개요
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="profile" checked disabled />
+                            프로필
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="performance" checked disabled />
+                            성능
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-subsection="weapon" checked />
+                            무장각인
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="algorithm" checked disabled />
+                            추천 알고리즘
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="intimacy" checked disabled />
+                            친밀도
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="story" checked />
+                            스토리
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="appearance" checked />
+                            작중 행적
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="skin" checked disabled />
+                            스킨
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="relationship" checked disabled />
+                            인형 관계
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="voice" checked disabled />
+                            대사
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="etc" checked disabled />
+                            기타
+                        </label>
+
+                        <label>
+                            <input type="checkbox" data-section="navigation" checked disabled />
+                            둘러보기
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="preview-panel">
+                <div class="panel-header">
+                    <h2>미리보기</h2>
+                    <span>Preview</span>
+                </div>
+
+                <article class="wiki-preview" id="preview">
+                    <section class="top-profile-card">
+                        <div class="top-profile-name">
+                            <h2 id="topPreviewName">-</h2>
+                            <p>🇨🇳 {중국어명} / 🇯🇵 {일본어명} / 🇺🇸 {영어명}</p>
+                        </div>
+
+                        <div class="top-image-grid">
+                            <div class="image-slot">이미지 업로드 예정</div>
+                            <div class="image-slot">이미지 업로드 예정</div>
+
+                            <div class="image-caption">기본 투영</div>
+                            <div class="image-caption">확장 투영</div>
+
+                            <div class="image-slot image-slot-wide">이미지 업로드 예정</div>
+                            <div class="image-caption image-caption-wide">완벽 투영</div>
+                        </div>
+                    </section>
+
+                    <blockquote class="top-quote" id="previewQuote">“”</blockquote>
+
+                    <nav class="wiki-toc" id="wikiToc">
+                        <button type="button" class="toc-toggle-button" id="tocToggleButton" aria-expanded="true">
+                            <span class="toc-title">목차</span>
+                            <span class="toc-arrow">▽</span>
+                        </button>
+
+                        <div class="toc-content" id="tocContent">
+                            <ol id="tocList">
+                                <li><a href="#overview">개요</a></li>
+                                <li><a href="#profile">프로필</a></li>
+                            </ol>
+                        </div>
+                    </nav>
+
+                    <section class="wiki-section" id="overview">
+                        <h2>
+                            <span class="section-number">1.</span>
+                            개요
+                        </h2>
+                        <p>
+                            모바일 게임 <span class="pnc-color">뉴럴 클라우드</span>에 등장하는 인형.
+                        </p>
+                    </section>
+
+                    <section class="wiki-section" id="profile">
+                        <h2>
+                            <span class="section-number">2.</span>
+                            프로필
+                        </h2>
+
+                        <div class="profile-card">
+                            <div class="profile-title">
+                                <span>피험 인형 프로필</span>
+                                <strong>PROJECT.NEURAL.CLOUD</strong>
+                            </div>
+
+                            <div class="profile-grid">
+
+                                <div class="profile-item">
+                                    <div class="profile-label">이름</div>
+                                    <div class="profile-value" id="previewName">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="profile-item">
+                                    <div class="profile-label">직업</div>
+                                    <div class="profile-value" id="previewJob">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="profile-item">
+                                    <div class="profile-label">모델</div>
+                                    <div class="profile-value" id="previewModel">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="profile-item">
+                                    <div class="profile-label">기업</div>
+                                    <div class="profile-value" id="previewCompany">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="profile-item">
+                                    <div class="profile-label">생일</div>
+                                    <div class="profile-value" id="previewBirthday">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="profile-item">
+                                    <div class="profile-label">클래스</div>
+                                    <div class="profile-value" id="previewClass">
+                                        -
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="profile-history-label">
+                                이력
+                            </div>
+
+                            <div class="profile-history-value" id="previewHistory">
+                                -
+                            </div>
+                        </div>
+                    </section>
+                    <section class="wiki-section" id="performance">
+                        <h2 class="section-header">
+                            <span class="section-number">3.</span>
+                            성능
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="algorithm">
+                        <h2 class="section-header">
+                            <span class="section-number">4.</span>
+                            추천 알고리즘
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="intimacy">
+                        <h2 class="section-header">
+                            <span class="section-number">5.</span>
+                            친밀도
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="story">
+                        <h2 class="section-header">
+                            <span class="section-number">6.</span>
+                            스토리
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="appearance">
+                        <h2 class="section-header">
+                            <span class="section-number">7.</span>
+                            작중 행적
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="skin">
+                        <h2 class="section-header">
+                            <span class="section-number">8.</span>
+                            스킨
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="relationship">
+                        <h2 class="section-header">
+                            <span class="section-number">9.</span>
+                            인형 관계
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="voice">
+                        <h2 class="section-header">
+                            <span class="section-number">10.</span>
+                            대사
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="etc">
+                        <h2 class="section-header">
+                            <span class="section-number">11.</span>
+                            기타
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+
+                    <section class="wiki-section" id="navigation">
+                        <h2 class="section-header">
+                            <span class="section-number">12.</span>
+                            둘러보기
+                        </h2>
+
+                        <div class="section-content"></div>
+                    </section>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+
+</html>
