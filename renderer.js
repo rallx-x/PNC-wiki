@@ -137,6 +137,8 @@ const S = {
   algoImg: `display:block;width:56px;height:56px;margin:0;border:0;object-fit:contain;`,
   algoNameCell: `padding:4px 6px;background:${C.algoNames};color:${C.white};text-align:center;font-size:14px;`,
   algoOptionValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;text-align:center;`,
+  algoSharedRow: `display:grid;grid-template-columns:72px 1fr 72px 1fr;border-top:1px solid ${C.infoLine};`,
+  algoSharedValue: `display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;padding:6px 4px;font-size:13px;text-align:center;`,
   optionChip: `display:inline-flex;align-items:center;gap:4px;white-space:nowrap;`,
   optionIcon: `display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:${C.infoIconBg};border-radius:4px;`,
   optionIconImg: `display:block;width:18px;height:18px;margin:0;border:0;object-fit:contain;`,
@@ -399,11 +401,18 @@ function optionChip(key) {
   return `<span style="${S.optionChip}">${icon}${esc(getLabel("attribute", key))}</span>`;
 }
 
-// 구역 표: 알고리즘마다 한 열 (이미지 / 이름 / 주 옵션 / 부 옵션)
+// 구역 표
+//  - 전부 공통 옵션이면: 이미지 / 이름 줄 아래에 "주 옵션 | 아이콘 | 부 옵션 | 아이콘" 한 줄
+//  - 하나라도 "따로 설정"이면: 알고리즘마다 한 열로 주 옵션 / 부 옵션 (따로 안 한 열은 공통 옵션)
 function renderAlgorithmZone(type, zone) {
   const typeItem = GAME_DATA.algorithmType[type];
   const allowedMain = getAllowedOptions(type, "main");
   const allowedSub = getAllowedOptions(type, "sub");
+  const pick = (list, allowed) =>
+    [...new Set((Array.isArray(list) ? list : []).filter((key) => key && allowed.includes(key) && getItem("attribute", key)))];
+
+  const sharedMain = pick(zone.main, allowedMain);
+  const sharedSub = pick(zone.sub, allowedSub);
 
   // 이 구역 type의 알고리즘만, 같은 키 중복 없이. 옵션은 이 구역 후보에 있는 것만
   const seen = new Set();
@@ -412,14 +421,23 @@ function renderAlgorithmZone(type, zone) {
     const item = getItem("algorithm", slot.key);
     if (!item || item.type !== type || seen.has(slot.key)) return null;
     seen.add(slot.key);
-    const main = allowedMain.includes(slot.main) && getItem("attribute", slot.main) ? slot.main : "";
-    const sub = (slot.sub || []).filter((key) => key && allowedSub.includes(key) && getItem("attribute", key));
-    return { key: slot.key, item, main, sub };
+    if (slot.custom !== true) return { key: slot.key, item, custom: false, main: sharedMain, sub: sharedSub };
+    return { key: slot.key, item, custom: true, main: pick([slot.main], allowedMain), sub: pick(slot.sub, allowedSub) };
   });
+  const anyCustom = cols.some((col) => col && col.custom);
 
+  const chips = (list) => (list.length ? list.map(optionChip).join("") : "-");
   const cell = (style, html) => `<div style="${style}">${html}</div>`;
   const row = (label, style, render) =>
     `<div style="${S.algoRow}">${cell(S.algoRowLabel, label)}${cols.map((col) => cell(style, render(col))).join("")}</div>`;
+
+  const optionRows = anyCustom
+    ? `${row("주 옵션", S.algoOptionValue, (col) => (col ? chips(col.main) : "-"))}
+  ${row("부 옵션", S.algoOptionValue, (col) => (col ? chips(col.sub) : "-"))}`
+    : `<div style="${S.algoSharedRow}">${cell(S.algoRowLabel, "주 옵션")}${cell(S.algoSharedValue, chips(sharedMain))}${cell(
+        S.algoRowLabel,
+        "부 옵션"
+      )}${cell(S.algoSharedValue, chips(sharedSub))}</div>`;
 
   return `
 <div class="pncwiki-algo-zone" style="${S.algoZone}">
@@ -433,8 +451,7 @@ function renderAlgorithmZone(type, zone) {
     )
     .join("")}</div>
   ${row("알고리즘", S.algoNameCell, (col) => (col ? esc(col.item.label) : "-"))}
-  ${row("주 옵션", S.algoOptionValue, (col) => (col && col.main ? optionChip(col.main) : "-"))}
-  ${row("부 옵션", S.algoOptionValue, (col) => (col && col.sub.length ? col.sub.map(optionChip).join("") : "-"))}
+  ${optionRows}
 </div>`;
 }
 

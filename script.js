@@ -16,16 +16,22 @@ const APP_ID = "pnc_wiki_generator";
 
 const ALGORITHM_SLOTS = 3; // 구역당 추천 알고리즘 칸 수
 const ALGORITHM_SUBS = 2; // 알고리즘 하나의 부 옵션 수 (게임 기준 최대 2)
+const ALGORITHM_SHARED_MAINS = 2; // 구역 공통 주 옵션 수 (추천은 최대 2개까지)
 const ALGORITHM_TYPES = ["offense", "stability", "special"];
 
+// custom: false면 구역 공통 옵션을 따르고, true면 이 칸의 main/sub를 쓴다
 function emptyAlgorithmSlot() {
-  return { key: "", main: "", sub: ["", ""] };
+  return { key: "", custom: false, main: "", sub: ["", ""] };
+}
+
+function emptyAlgorithmZone() {
+  return { main: ["", ""], sub: ["", ""], slots: emptyAlgorithmSlots() };
 }
 
 function emptyAlgorithmSlots() {
   return [emptyAlgorithmSlot(), emptyAlgorithmSlot(), emptyAlgorithmSlot()];
 }
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 const STORAGE_KEY = "pnc_wiki_generator_autosave";
 
 // 사용자가 입력·선택하는 값만 둔다. (표시 이름, 번호 등 계산 가능한 값은 저장하지 않음)
@@ -62,9 +68,9 @@ const DEFAULT_STATE = {
   // 추천 알고리즘: 구역마다 알고리즘 3칸, 칸마다 주 옵션 1개 + 부 옵션 2개
   // (이름·이미지·세트 효과·수치는 GAME_DATA. 여기에는 고른 키만)
   algorithm: {
-    offense: { slots: emptyAlgorithmSlots() },
-    stability: { slots: emptyAlgorithmSlots() },
-    special: { slots: emptyAlgorithmSlots() },
+    offense: emptyAlgorithmZone(),
+    stability: emptyAlgorithmZone(),
+    special: emptyAlgorithmZone(),
     // slot = { key: 알고리즘 키, main: 주 옵션 attribute 키, sub: [부 옵션1, 부 옵션2] } ("" = 미선택)
   },
   // 친밀도: 고른 키만 저장. 수치·문장·이미지·등급은 GAME_DATA에서 가져옴
@@ -217,7 +223,43 @@ const MIGRATIONS = {
     });
     return next;
   },
-  // 다음에 구조가 바뀌면 여기에 3: (old) => ({ ... }) 추가
+  // v3 → v4: 구역 공통 옵션(주 최대 2·부 최대 2) + 칸별 "따로 설정"(custom) 추가
+  //   알고리즘이 있는 칸들의 옵션이 전부 같으면 → 공통 옵션으로 합침
+  //   하나라도 다르면 → 알고리즘이 있는 칸은 각자 "따로 설정"으로 유지
+  3: (old) => {
+    const next = { ...old, version: 4 };
+    const algorithm = isPlainObject(old.algorithm) ? old.algorithm : {};
+    const str = (v) => (typeof v === "string" ? v : "");
+    next.algorithm = {};
+    ["offense", "stability", "special"].forEach((type) => {
+      const zone = isPlainObject(algorithm[type]) ? algorithm[type] : {};
+      const slots = (Array.isArray(zone.slots) ? zone.slots : []).slice(0, 3).map((slot) => {
+        const s = isPlainObject(slot) ? slot : {};
+        const sub = Array.isArray(s.sub) ? s.sub : [];
+        return { key: str(s.key), main: str(s.main), sub: [str(sub[0]), str(sub[1])] };
+      });
+      const sign = (s) => JSON.stringify([s.main, [...s.sub].filter(Boolean).sort()]);
+      const filled = slots.filter((s) => s.key);
+      const withOptions = slots.filter((s) => s.main || s.sub.some(Boolean));
+      const sameAll = filled.length > 0 && filled.every((s) => sign(s) === sign(filled[0]));
+      let shared = null;
+      if (sameAll) shared = filled[0];
+      else if (!filled.length && withOptions.length) shared = withOptions[0];
+
+      next.algorithm[type] = {
+        main: shared ? [shared.main, ""] : ["", ""],
+        sub: shared ? [...shared.sub] : ["", ""],
+        slots: slots.map((s) => {
+          const custom = !shared && Boolean(s.key);
+          return custom
+            ? { key: s.key, custom: true, main: s.main, sub: s.sub }
+            : { key: s.key, custom: false, main: "", sub: ["", ""] };
+        }),
+      };
+    });
+    return next;
+  },
+  // 다음에 구조가 바뀌면 여기에 4: (old) => ({ ... }) 추가
 };
 
 // 어떤 데이터든 현재 state 형태로 바꿔서 돌려준다. 못 쓰는 데이터면 오류.
@@ -278,6 +320,16 @@ function normalizeState(st) {
 
   // 추천 알고리즘: 칸 3개, 칸 모양 정리, 같은 구역 알고리즘 중복은 뒤 칸 비움,
   // 부 옵션은 2칸 고정 (같은 칸 안 중복은 뒤쪽 비움)
+  // 공통 옵션: 주 2칸·부 2칸 고정 (중복은 뒤쪽 비움)
+  const fixedList = (rawList, size) => {
+    const src = Array.isArray(rawList) ? rawList : [];
+    const out = [];
+    for (let i = 0; i < size; i += 1) {
+      const v = typeof src[i] === "string" ? src[i] : "";
+      out.push(v && out.includes(v) ? "" : v);
+    }
+    return out;
+  };
   ALGORITHM_TYPES.forEach((type) => {
     const zone = isPlainObject(st.algorithm[type]) ? st.algorithm[type] : {};
     const raw = Array.isArray(zone.slots) ? zone.slots.slice(0, ALGORITHM_SLOTS) : [];
@@ -293,10 +345,14 @@ function normalizeState(st) {
         const v = typeof subRaw[i] === "string" ? subRaw[i] : "";
         sub.push(v && sub.includes(v) ? "" : v);
       }
-      return { key, main: typeof s.main === "string" ? s.main : "", sub };
+      return { key, custom: s.custom === true, main: typeof s.main === "string" ? s.main : "", sub };
     });
     while (slots.length < ALGORITHM_SLOTS) slots.push(emptyAlgorithmSlot());
-    st.algorithm[type] = { slots };
+    st.algorithm[type] = {
+      main: fixedList(zone.main, ALGORITHM_SHARED_MAINS),
+      sub: fixedList(zone.sub, ALGORITHM_SUBS),
+      slots,
+    };
   });
 
   const like = unique(st.intimacy.gifts.like);
@@ -493,6 +549,27 @@ function buildAlgorithmPicker() {
     const mainOptions = getAllowedOptions(type, "main").map((key) => [key, getLabel("attribute", key)]);
     const subOptions = getAllowedOptions(type, "sub").map((key) => [key, getLabel("attribute", key)]);
 
+    // 구역 공통 옵션 (기본: 이 구역 알고리즘 전부에 적용)
+    const shared = document.createElement("div");
+    shared.className = "algo-shared";
+    const sharedTitle = document.createElement("div");
+    sharedTitle.className = "algo-shared-title";
+    sharedTitle.textContent = "공통 옵션 (이 구역 알고리즘 전부에 적용)";
+    const sharedRow = document.createElement("div");
+    sharedRow.className = "algo-shared-row";
+    [
+      ["주 옵션 1", `algorithm.${type}.main.0`, mainOptions],
+      ["주 옵션 2", `algorithm.${type}.main.1`, mainOptions],
+      ["부 옵션 1", `algorithm.${type}.sub.0`, subOptions],
+      ["부 옵션 2", `algorithm.${type}.sub.1`, subOptions],
+    ].forEach(([text, field, options]) => {
+      const label = document.createElement("label");
+      label.append(document.createTextNode(text), makeSelect(field, "선택 안 함", options));
+      sharedRow.appendChild(label);
+    });
+    shared.append(sharedTitle, sharedRow);
+    zone.appendChild(shared);
+
     for (let i = 0; i < ALGORITHM_SLOTS; i += 1) {
       const base = `algorithm.${type}.slots.${i}`;
       const card = document.createElement("div");
@@ -511,8 +588,19 @@ function buildAlgorithmPicker() {
       desc.className = "algo-desc";
       desc.dataset.algoDesc = `${type}.${i}`;
 
+      // + 버튼: 이 알고리즘만 옵션 따로 설정
+      const toggle = document.createElement("label");
+      toggle.className = "algo-custom-toggle";
+      const toggleInput = document.createElement("input");
+      toggleInput.type = "checkbox";
+      toggleInput.dataset.field = `${base}.custom`;
+      const toggleText = document.createElement("span");
+      toggleText.dataset.algoToggleText = `${type}.${i}`;
+      toggle.append(toggleInput, toggleText);
+
       const optionRow = document.createElement("div");
       optionRow.className = "algo-option-row";
+      optionRow.dataset.algoOwn = `${type}.${i}`;
       const mainBox = document.createElement("label");
       mainBox.append(document.createTextNode("주 옵션"), makeSelect(`${base}.main`, "선택 안 함", mainOptions));
       const sub1 = document.createElement("label");
@@ -521,7 +609,7 @@ function buildAlgorithmPicker() {
       sub2.append(document.createTextNode("부 옵션 2"), makeSelect(`${base}.sub.1`, "선택 안 함", subOptions));
       optionRow.append(mainBox, sub1, sub2);
 
-      card.append(head, desc, optionRow);
+      card.append(head, desc, toggle, optionRow);
       zone.appendChild(card);
     }
 
@@ -529,10 +617,23 @@ function buildAlgorithmPicker() {
   });
 }
 
-// state → 알고리즘 입력 (아이콘·세트 효과, 같은 구역 알고리즘 중복 막기, 부 옵션 1·2 중복 막기)
+// 두 칸짜리 선택에서 서로 같은 값 고르지 못하게
+function blockPairDuplicate(fieldA, fieldB) {
+  const a = document.querySelector(`[data-field="${fieldA}"]`);
+  const b = document.querySelector(`[data-field="${fieldB}"]`);
+  [[a, b], [b, a]].forEach(([self, other]) => {
+    [...self.options].forEach((option) => {
+      option.disabled = Boolean(option.value) && option.value === other.value;
+    });
+  });
+}
+
+// state → 알고리즘 입력 (아이콘·세트 효과, 같은 구역 알고리즘 중복 막기, 옵션 1·2 중복 막기, 따로 설정 표시)
 function fillAlgorithmPicker() {
   ALGORITHM_TYPES.forEach((type) => {
     const slots = state.algorithm[type].slots;
+    blockPairDuplicate(`algorithm.${type}.main.0`, `algorithm.${type}.main.1`);
+    blockPairDuplicate(`algorithm.${type}.sub.0`, `algorithm.${type}.sub.1`);
     const chosenKeys = slots.map((slot) => slot.key);
 
     slots.forEach((slot, i) => {
@@ -558,13 +659,12 @@ function fillAlgorithmPicker() {
         option.disabled = Boolean(option.value) && option.value !== slot.key && chosenKeys.includes(option.value);
       });
 
-      [0, 1].forEach((n) => {
-        const subSelect = document.querySelector(`[data-field="${base}.sub.${n}"]`);
-        const other = slot.sub[1 - n];
-        [...subSelect.options].forEach((option) => {
-          option.disabled = Boolean(option.value) && option.value === other;
-        });
-      });
+      blockPairDuplicate(`${base}.sub.0`, `${base}.sub.1`);
+
+      document.querySelector(`[data-algo-own="${type}.${i}"]`).hidden = !slot.custom;
+      document.querySelector(`[data-algo-toggle-text="${type}.${i}"]`).textContent = slot.custom
+        ? "− 공통 옵션으로 되돌리기"
+        : "+ 이 알고리즘만 옵션 따로 설정";
     });
   });
 }
@@ -751,6 +851,18 @@ function handleInput(event) {
   }
 
   setPath(state, path, value);
+
+  // "따로 설정"을 처음 켤 때 빈 칸이면 공통 옵션을 채워 줌 (주 옵션은 1개라 첫 번째만)
+  const customMatch = path.match(/^algorithm\.(\w+)\.slots\.(\d+)\.custom$/);
+  if (customMatch && value === true) {
+    const zone = state.algorithm[customMatch[1]];
+    const slot = zone.slots[Number(customMatch[2])];
+    if (!slot.main && !slot.sub.some(Boolean)) {
+      slot.main = zone.main.find(Boolean) || "";
+      slot.sub = [...zone.sub];
+    }
+    fillForm();
+  }
 
   if (path.startsWith("algorithm.")) {
     fillAlgorithmPicker(); // 아이콘 미리보기·중복 막기 갱신

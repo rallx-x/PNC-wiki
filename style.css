@@ -349,6 +349,59 @@ body {
   font-size: 13px;
 }
 
+/* 추천 알고리즘: 공통 옵션 */
+.algo-shared {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f4f6fa;
+}
+
+.algo-shared-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.algo-shared-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.form-group .algo-shared-row label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sub-text);
+}
+
+.form-group .algo-shared-row select {
+  margin-top: 4px;
+  padding: 8px 6px;
+  font-size: 13px;
+}
+
+/* + 이 알고리즘만 옵션 따로 설정 */
+.form-group .algo-custom-toggle {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 5px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--sub-text);
+  cursor: pointer;
+}
+
+.algo-custom-toggle input {
+  display: none;
+}
+
+.algo-option-row[hidden] {
+  display: none;
+}
+
 /* 친밀도: 스킬 칸 (칸 이름 위, 선택 아래) */
 .form-group .skill-slot-row span {
   display: block;
