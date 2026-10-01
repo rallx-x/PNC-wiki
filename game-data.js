@@ -41,6 +41,15 @@ const GAME_DATA = {
     healing: { label: "회복", icon: "position/healing.png" },
   },
 
+  // 성우 국가 (국기는 이모지 대신 이미지 — 환경마다 다르게 보이는 문제 방지)
+  // JSON에는 국가 키만 저장: voiceActor.country = "jp"
+  country: {
+    jp: { label: "일본", icon: "flag/jp.png" },
+    kr: { label: "한국", icon: "flag/kr.png" },
+    cn: { label: "중국", icon: "flag/cn.png" },
+    us: { label: "미국", icon: "flag/us.png" },
+  },
+
   // 능력치 (능력치 표, 알고리즘 옵션 등에 공용)
   attribute: {
     "max-hp": { label: "최대체력", icon: "attributes/max-hp.png" },

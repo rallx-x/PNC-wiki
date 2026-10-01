@@ -6,7 +6,7 @@
    3. 불러오기 / 버전 변환(migration)
    4. 저장 (localStorage, JSON 파일)
    5. 입력 폼 ↔ state 연결 (data-field)
-   6. 미리보기 그리기
+   6. 미리보기 그리기 (문서 자체는 renderer.js)
    7. 이벤트 연결 / 시작
    ========================================================= */
 
@@ -43,20 +43,7 @@ const DEFAULT_STATE = {
   },
 };
 
-// 문단 순서·제목. 번호와 목차는 이 목록으로 자동 계산한다.
-const SECTION_DEFS = [
-  { key: "overview", title: "개요", fixed: true },
-  { key: "profile", title: "프로필", fixed: true },
-  { key: "performance", title: "성능", fixed: true },
-  { key: "algorithm", title: "추천 알고리즘", fixed: true },
-  { key: "intimacy", title: "친밀도", fixed: true },
-  { key: "story", title: "스토리" },
-  { key: "appearance", title: "작중 행적" },
-  { key: "skin", title: "스킨", fixed: true },
-  { key: "relationship", title: "인형 관계", fixed: true },
-  { key: "voice", title: "대사", fixed: true },
-  { key: "etc", title: "기타", fixed: true },
-];
+// 문단 순서·제목(SECTION_DEFS)과 문서 그리기는 renderer.js에 있음.
 
 let state = cloneDefaults();
 
@@ -344,117 +331,22 @@ function handleInput(event) {
 
 /* ---------- 6. 미리보기 그리기 ---------- */
 
-const preview = {
-  name: document.getElementById("previewName"),
-  topName: document.getElementById("topPreviewName"),
-  job: document.getElementById("previewJob"),
-  model: document.getElementById("previewModel"),
-  company: document.getElementById("previewCompany"),
-  classType: document.getElementById("previewClass"),
-  birthday: document.getElementById("previewBirthday"),
-  history: document.getElementById("previewHistory"),
-  quote: document.getElementById("previewQuote"),
-};
-
-const tocList = document.getElementById("tocList");
-
-function valueOrDash(value) {
-  const trimmed = String(value || "").trim();
-  return trimmed ? trimmed : "-";
-}
-
-function getBirthdayText(birthday) {
-  if (birthday.unknown) return "불명";
-
-  const month = birthday.month ? `${birthday.month}월` : "";
-  const day = birthday.day ? `${birthday.day}일` : "";
-
-  return [month, day].filter(Boolean).join(" ");
-}
-
-// 아이콘 + 이름 표시. 아이콘이 없으면 이름만.
-// (로고가 흰색이라 어두운 배경 위에 올림)
-function renderIconValue(target, category, key) {
-  const label = getLabel(category, key);
-  const iconUrl = getIconUrl(category, key);
-
-  target.textContent = "";
-
-  if (iconUrl) {
-    const badge = document.createElement("span");
-    badge.style.cssText =
-      "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:8px;background:#2b2b2b;border-radius:4px;vertical-align:middle;";
-
-    const img = document.createElement("img");
-    img.src = iconUrl;
-    img.alt = label;
-    img.style.cssText = "width:24px;height:24px;object-fit:contain;";
-
-    badge.appendChild(img);
-    target.appendChild(badge);
-  }
-
-  target.appendChild(document.createTextNode(valueOrDash(label)));
-}
-
-function renderProfile() {
-  const p = state.profile;
-  const name = valueOrDash(p.name);
-
-  preview.name.textContent = name;
-  preview.topName.textContent = name;
-  preview.job.textContent = valueOrDash(p.job);
-  preview.model.textContent = valueOrDash(p.model);
-  renderIconValue(preview.company, "company", p.company);
-  renderIconValue(preview.classType, "class", p.class);
-  preview.birthday.textContent = valueOrDash(getBirthdayText(p.birthday));
-  preview.history.textContent = valueOrDash(p.history);
-}
-
-function renderOverview() {
-  const quote = state.overview.quote.trim();
-  preview.quote.textContent = quote ? `“${quote}”` : "“”";
-}
-
-function isSectionEnabled(section) {
-  return section.fixed || state.sections[section.key] !== false;
-}
-
-function renderSections() {
-  if (!tocList) return;
-
-  tocList.innerHTML = "";
-  let number = 1;
-
-  SECTION_DEFS.forEach((section) => {
-    const sectionEl = document.getElementById(section.key);
-    const enabled = isSectionEnabled(section);
-
-    if (sectionEl) {
-      sectionEl.hidden = !enabled;
-    }
-    if (!enabled) return;
-
-    const numberEl = sectionEl && sectionEl.querySelector(".section-number");
-    if (numberEl) {
-      numberEl.textContent = `${number}.`;
-    }
-
-    const li = document.createElement("li");
-    const a = document.createElement("a");
-    a.href = `#${section.key}`;
-    a.textContent = `${number}. ${section.title}`;
-    li.appendChild(a);
-    tocList.appendChild(li);
-
-    number += 1;
-  });
-}
+// 문서 HTML은 renderer.js의 renderDocument(state)가 만든다.
+// 미리보기 / 티스토리 출력 / 이미지 캡처가 모두 이 결과 하나를 쓴다.
+const previewEl = document.getElementById("preview");
 
 function render() {
-  renderProfile();
-  renderOverview();
-  renderSections();
+  previewEl.innerHTML = renderDocument(state);
+}
+
+// 티스토리용 HTML (미리보기와 완전히 같은 결과)
+function getOutputHtml() {
+  return renderDocument(state);
+}
+
+// 이미지 캡처용 파트 목록 (미리보기 DOM 기준)
+function getPreviewParts() {
+  return [...previewEl.querySelectorAll("[data-part]")];
 }
 
 /* ---------- 7. 이벤트 연결 / 시작 ---------- */
@@ -467,21 +359,6 @@ function refreshAll() {
 }
 
 editorPanel.addEventListener("input", handleInput);
-
-// 목차 접기/펼치기 (미리보기 화면용)
-const wikiToc = document.getElementById("wikiToc");
-const tocToggleButton = document.getElementById("tocToggleButton");
-const tocArrow = tocToggleButton ? tocToggleButton.querySelector(".toc-arrow") : null;
-
-if (tocToggleButton && wikiToc) {
-  tocToggleButton.addEventListener("click", () => {
-    const isCollapsed = wikiToc.classList.toggle("is-collapsed");
-    tocToggleButton.setAttribute("aria-expanded", String(!isCollapsed));
-    if (tocArrow) {
-      tocArrow.textContent = isCollapsed ? "▷" : "▽";
-    }
-  });
-}
 
 document.getElementById("resetButton").addEventListener("click", () => {
   if (!confirm("입력한 내용을 모두 지울까요?\n(저장하지 않은 내용은 되돌릴 수 없습니다)")) return;
