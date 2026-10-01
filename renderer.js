@@ -119,11 +119,13 @@ const S = {
   lvValue: `color:${C.lvValue};`,
   empty: `padding:8px;background:${C.white};text-align:center;`,
   reactionIcon: `display:inline-block;width:18px;height:18px;margin:0;border:0;vertical-align:middle;`,
-  giftList: `display:flex;flex-wrap:wrap;gap:10px;padding:10px;background:${C.white};`,
-  giftCard: `width:72px;text-align:center;`,
-  giftBox: `box-sizing:border-box;width:64px;height:64px;margin:0 auto;padding:2px;border:2px solid;border-radius:4px;background:${C.iconBg};`,
+  // 선물 카드 (나무위키 친밀도 선물 칸 참고): 밝은 회색 판 위 등급색 상자 + 아래 어두운 이름 띠
+  giftList: `display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:${C.white};`,
+  giftCard: `box-sizing:border-box;width:104px;background:#f0f0f0;`,
+  giftBox: `box-sizing:border-box;width:88px;height:88px;margin:8px auto;padding:4px;border:3px solid;border-radius:10px;`,
   giftImg: `display:block;width:100%;height:100%;margin:0;border:0;object-fit:contain;`,
-  giftName: `margin:4px 0 0;font-size:12px;line-height:1.3;word-break:keep-all;`,
+  giftName: `display:flex;align-items:center;justify-content:center;gap:4px;padding:4px 2px;background:#24272d;color:${C.white};font-size:12px;font-weight:700;line-height:1.3;word-break:keep-all;text-align:center;`,
+  giftNameIcon: `display:inline-block;flex-shrink:0;width:14px;height:14px;margin:0;border:0;`,
 
   // 추천 알고리즘 (나무위키 템플릿: 구역마다 폭 500px 표, 테두리 2px #2e2e2e)
   algoZone: `box-sizing:border-box;max-width:500px;margin:0 0 16px;border:2px solid ${C.algoHead};background:${C.white};color:${C.infoText};`,
@@ -467,12 +469,16 @@ function renderIntimacySkill(key, order) {
   </div>`;
 }
 
-function renderGiftCard(key) {
+// 선물 카드: 등급색 상자 안 선물 이미지 + 이름 띠(반응 아이콘 + 이름)
+function renderGiftCard(key, reaction) {
   const gift = getItem("gift", key);
   if (!gift) return "";
   const tier = getItem("giftTier", gift.tier);
   const color = tier ? tier.color : C.infoLine;
-  return `<div style="${S.giftCard}"><div style="${S.giftBox}border-color:${color};">${img(getIconUrl("gift", key), gift.label, S.giftImg)}</div><div style="${S.giftName}">${esc(gift.label)}</div></div>`;
+  const bg = tier && tier.bg ? tier.bg : C.iconBg;
+  const reactionUrl = getIconUrl("giftReaction", reaction);
+  const reactionIcon = reactionUrl ? img(reactionUrl, "", S.giftNameIcon) : "";
+  return `<div style="${S.giftCard}"><div style="${S.giftBox}border-color:${color};background:${bg};">${img(getIconUrl("gift", key), gift.label, S.giftImg)}</div><div style="${S.giftName}">${reactionIcon}<span>${esc(gift.label)}</span></div></div>`;
 }
 
 function renderGiftGroup(reaction, title, keys) {
@@ -480,7 +486,7 @@ function renderGiftGroup(reaction, title, keys) {
   // GAME_DATA 순서(등급순)로 표시. 저장 순서와 무관
   const cards = Object.keys(GAME_DATA.gift)
     .filter((key) => keys.includes(key))
-    .map(renderGiftCard)
+    .map((key) => renderGiftCard(key, reaction))
     .join("");
   return `
   <div style="${S.intimacyHead}">${icon ? img(icon, getLabel("giftReaction", reaction), S.reactionIcon) : ""}<span>${title}</span></div>

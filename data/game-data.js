@@ -47,11 +47,12 @@ const GAME_DATA = {
 
   // 성우 국가 (국기는 이모지 대신 이미지 — 환경마다 다르게 보이는 문제 방지)
   // JSON에는 국가 키만 저장: voiceActor.country = "jp"
+  // 국기 파일은 svg (확대해도 깨지지 않음)
   country: {
-    jp: { label: "일본", icon: "flag/jp.png" },
-    kr: { label: "한국", icon: "flag/kr.png" },
-    cn: { label: "중국", icon: "flag/cn.png" },
-    us: { label: "미국", icon: "flag/us.png" },
+    jp: { label: "일본", icon: "flag/jp.svg" },
+    kr: { label: "한국", icon: "flag/kr.svg" },
+    cn: { label: "중국", icon: "flag/cn.svg" },
+    us: { label: "미국", icon: "flag/us.svg" },
   },
 
   // 능력치 (능력치 표, 알고리즘 옵션 등에 공용)
@@ -77,10 +78,11 @@ const GAME_DATA = {
   },
 
   // 선물 등급. 테두리 색은 화면에서 직접 그림 (색은 나중에 게임 화면 보고 조정)
+  // color = 테두리, bg = 이미지 칸 안쪽 배경 (나무위키 선물 카드 참고)
   giftTier: {
-    1: { label: "1티어", color: "#2f8fd8" },
-    2: { label: "2티어", color: "#9b5bd6" },
-    3: { label: "3티어", color: "#f08a1e" },
+    1: { label: "1티어", color: "#2f8fd8", bg: "#2f6b86" },
+    2: { label: "2티어", color: "#9b5bd6", bg: "#6a4a82" },
+    3: { label: "3티어", color: "#f08a1e", bg: "#8a5626" },
   },
 
   // 선물 호불호 아이콘 (gift 폴더)
