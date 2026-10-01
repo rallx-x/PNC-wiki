@@ -156,49 +156,51 @@ const GAME_DATA = {
     },
   },
 
+  // 추천 알고리즘. set2 / set3 = 2세트·3세트 효과 (출처: 나무위키 「뉴럴 클라우드/알고리즘」, 설명 문단 제외)
   algorithm: {
     // 공격성
-    "limit-value": { label: "역치초과 반응", type: "offense", icon: "algorithm/limit-value.png" },
-    feedforward: { label: "예측", type: "offense", icon: "algorithm/feedforward.png" },
-    progression: { label: "점진", type: "offense", icon: "algorithm/progression.png" },
-    deduction: { label: "추론", type: "offense", icon: "algorithm/deduction.png" },
-    surplus: { label: "증폭", type: "offense", icon: "algorithm/surplus.png" },
-    puncture: { label: "송곳", type: "offense", icon: "algorithm/puncture.png" },
-    permeate: { label: "드릴", type: "offense", icon: "algorithm/permeate.png" },
-    "lower-limit": { label: "최소 역치", type: "offense", icon: "algorithm/lower-limit.png" },
-    "data-repair": { label: "데이터 복원", type: "offense", icon: "algorithm/data-repair.png" },
-    "mlr-matrix": { label: "이질 회귀", type: "offense", icon: "algorithm/mlr-matrix.png" },
-    polybore: { label: "중압 관통", type: "offense", icon: "algorithm/polybore.png" },
-    hyperpulse: { label: "펄스 첨예화", type: "offense", icon: "algorithm/hyperpulse.png" },
+    "limit-value": { label: "역치초과 반응", type: "offense", set2: "주는 피해량 +5%", set3: "자신보다 최대체력이 높은 적에게 피해를 줄 때, 추가로 해당 피해량의 (6%+적 최대체력/자신 최대체력×3%)만큼의 파생피해를 준다. 피해 유형은 원래 피해량 유형과 동일하고, 최대치는 20%.", icon: "algorithm/limit-value.png" },
+    feedforward: { label: "예측", type: "offense", set2: "기초 공격력 +15%", icon: "algorithm/feedforward.png" },
+    progression: { label: "점진", type: "offense", set2: "기초 연산력 +15%", icon: "algorithm/progression.png" },
+    deduction: { label: "추론", type: "offense", set2: "공격속도 +30", icon: "algorithm/deduction.png" },
+    surplus: { label: "증폭", type: "offense", set2: "주는 피해량 +5%", icon: "algorithm/surplus.png" },
+    puncture: { label: "송곳", type: "offense", set2: "물리/연산관통 +80", icon: "algorithm/puncture.png" },
+    permeate: { label: "드릴", type: "offense", set2: "물리/연산관통 +20%", icon: "algorithm/permeate.png" },
+    "lower-limit": { label: "최소 역치", type: "offense", set2: "체력흡수 +10%", set3: "체력이 15% 미만일 때 10초간 공격속도 +50, 공격력 +10%, 피해차감 +30%. 전투마다 1회 발동 가능.", icon: "algorithm/lower-limit.png" },
+    "data-repair": { label: "데이터 복원", type: "offense", set2: "효과저항 +50", set3: "피해를 줄 때 피해량의 10%만큼 자신의 체력을 회복함.", icon: "algorithm/data-repair.png" },
+    "mlr-matrix": { label: "이질 회귀", type: "offense", set2: "주는 피해량 +5%", set3: "적 유닛을 쓰러뜨리면 해당 전투 동안 상대의 공격력, 연산력, 체력 상한의 12%를 탈취하고 그만큼 회복한다. (중복 시 최고치로 갱신)", icon: "algorithm/mlr-matrix.png" },
+    stack: { label: "연산자 중첩", type: "offense", set2: "기초 연산력 +15%", set3: "일반공격 3회마다 추격포를 하나 생성한다, 최대 4회 중첩. 스택마다 일반공격 시 추가로 자신 연산력 10%만큼의「파생」연산피해를 준다.", icon: "algorithm/stack.png" },
+    polybore: { label: "증압 관통", type: "offense", set2: "물리/연산관통 +20%", set3: "전투 시작 시 스킬 충전 속도가 반으로 감소, 감소한 충전 속도 1%마다 주는 피해량 1.2% 상승.", icon: "algorithm/polybore.png" },
+    hyperpulse: { label: "펄스 첨예화", type: "offense", set2: "주는 피해량 +5%", set3: "전투 시작 시 공격/연산력 +10%, 1초마다 추가로 공격/연산력 3% 상승, 최대 10중첩, 스킬 발동 3초 후 해제.", icon: "algorithm/hyperpulse.png" },
     // 안정성
-    perception: { label: "감지", type: "stability", icon: "algorithm/perception.png" },
-    rationality: { label: "이성", type: "stability", icon: "algorithm/rationality.png" },
-    connection: { label: "연결", type: "stability", icon: "algorithm/connection.png" },
-    lattice: { label: "펜스", type: "stability", icon: "algorithm/lattice.png" },
-    twinform: { label: "쌍구축", type: "stability", icon: "algorithm/twinform.png" },
-    threshold: { label: "확대", type: "stability", icon: "algorithm/threshold.png" },
-    encapsulate: { label: "코드 캡슐화", type: "stability", icon: "algorithm/encapsulate.png" },
-    iteration: { label: "머신러닝", type: "stability", icon: "algorithm/iteration.png" },
-    overflow: { label: "오버플로우", type: "stability", icon: "algorithm/overflow.png" },
-    reflection: { label: "열축척반사", type: "stability", icon: "algorithm/reflection.png" },
-    resolve: { label: "낮은값 저항", type: "stability", icon: "algorithm/resolve.png" },
-    buildup: { label: "방벽 중첩", type: "stability", icon: "algorithm/buildup.png" },
-    acclimate: { label: "반응 쿠션", type: "stability", icon: "algorithm/acclimate.png" },
+    perception: { label: "감지", type: "stability", set2: "기초 체력 +15%", icon: "algorithm/perception.png" },
+    rationality: { label: "이성", type: "stability", set2: "기초 방어력 +15%", icon: "algorithm/rationality.png" },
+    connection: { label: "연결", type: "stability", set2: "효과저항 +50", icon: "algorithm/connection.png" },
+    lattice: { label: "펜스", type: "stability", set2: "연산방어 +15%", icon: "algorithm/lattice.png" },
+    twinform: { label: "쌍구축", type: "stability", set2: "물리/연산방어 +10%", icon: "algorithm/twinform.png" },
+    threshold: { label: "확대", type: "stability", set2: "최대체력 +2500", icon: "algorithm/threshold.png" },
+    encapsulate: { label: "코드 캡슐화", type: "stability", set2: "피해차감 +5%", set3: "지원 능력을 얻어 현재 체력이 가장 낮은 아군이 받는 피해량의 30%를 대신 받는다.", icon: "algorithm/encapsulate.png" },
+    iteration: { label: "머신러닝", type: "stability", set2: "피해반사 +5%", set3: "전투 종료 시 쓰러지지 않았을 경우 최대 체력의 15%만큼 체력을 회복한다.", icon: "algorithm/iteration.png" },
+    overflow: { label: "오버플로우", type: "stability", set2: "5초당 회복 +2%", set3: "전투 시작 시 자신에게 물리 방어력 500%만큼의 보호막을 생성한다.", icon: "algorithm/overflow.png" },
+    reflection: { label: "열축적 반사", type: "stability", set2: "피해반사 +5%", set3: "반사 피해를 줄 때 추가로 자신 최대체력 1.2%만큼의 순수피해를 준다. 스킬 발동 시, 자신 주위 2칸 안의 적을 3초간 도발하며, 도발 기간 자신의 피해반사 수치가 10% 상승한다.", icon: "algorithm/reflection.png" },
+    resolve: { label: "낮은값 저항", type: "stability", set2: "피해차감 +5%", set3: "체력이 50% 미만일 때 피해차감 10%를 얻는다. 이후 감소한 10% 체력마다 피해차감 5%를 얻는다. 체력이 변화할 때마다 효과를 갱신한다.", icon: "algorithm/resolve.png" },
+    buildup: { label: "방벽 중첩", type: "stability", set2: "물리/연산방어 +10%", set3: "전투 시작 시,물리/연산방어 +35%. 스킬 발동 후 5초간 추가로 +35%", icon: "algorithm/buildup.png" },
+    acclimate: { label: "반응 쿠션", type: "stability", set2: "기초 체력 +15%", set3: "아군 인형 체력이 30% 미만이 될 경우, 그 아군 인형에게 착용자 최대체력 35%만큼의 보호막을 부여하고 5초간 은신시킨다.(전투당 1회 발동)", icon: "algorithm/acclimate.png" },
     // 특이성
-    cluster: { label: "집속", type: "special", icon: "algorithm/cluster.png" },
-    inspiration: { label: "계몽", type: "special", icon: "algorithm/inspiration.png" },
-    convolution: { label: "합성곱", type: "special", icon: "algorithm/convolution.png" },
-    stratagem: { label: "게임론", type: "special", icon: "algorithm/stratagem.png" },
-    rapidity: { label: "키네틱", type: "special", icon: "algorithm/rapidity.png" },
-    fastload: { label: "퀵로드", type: "special", icon: "algorithm/fastload.png" },
-    increment: { label: "축적", type: "special", icon: "algorithm/increment.png" },
-    paradigm: { label: "행렬 구조", type: "special", icon: "algorithm/paradigm.png" },
-    "loop-gain": { label: "양성 피드백", type: "special", icon: "algorithm/loop-gain.png" },
-    "delta-v": { label: "벡터 가속", type: "special", icon: "algorithm/delta-v.png" },
-    exploit: { label: "취약점 확장", type: "special", icon: "algorithm/exploit.png" },
-    delivery: { label: "메모리 방출", type: "special", icon: "algorithm/delivery.png" },
-    flush: { label: "신속정리", type: "special", icon: "algorithm/flush.png" },
-    "s-v-m": { label: "서포트 벡터", type: "special", icon: "algorithm/s-v-m.png" },
+    cluster: { label: "집속", type: "special", set2: "치명률 +10%", icon: "algorithm/cluster.png" },
+    inspiration: { label: "계몽", type: "special", set2: "5초당 회복 +2%", icon: "algorithm/inspiration.png" },
+    convolution: { label: "합성곱", type: "special", set2: "치명타 피해 +20%", icon: "algorithm/convolution.png" },
+    stratagem: { label: "게임론", type: "special", set2: "회피 +8%", icon: "algorithm/stratagem.png" },
+    rapidity: { label: "키네틱", type: "special", set2: "공격속도 +30", icon: "algorithm/rapidity.png" },
+    fastload: { label: "퀵로드", type: "special", set2: "충전속도 +10%", icon: "algorithm/fastload.png" },
+    increment: { label: "축적", type: "special", set2: "치료효과 +7.5%", icon: "algorithm/increment.png" },
+    paradigm: { label: "행렬 구조", type: "special", set2: "공격속도 +30", set3: "치명타 4회마다 적에게 현재 체력 8%만큼의 순수피해를 준다. 단 연산력의 2배를 넘지 않음.", icon: "algorithm/paradigm.png" },
+    "loop-gain": { label: "양성 피드백", type: "special", set2: "치료효과 +7.5%", set3: "아군을 치료할 때 4초간 대상이 받는 치료량을 20% 상승시킨다.", icon: "algorithm/loop-gain.png" },
+    "delta-v": { label: "벡터 가속", type: "special", set2: "충전속도 +10%", set3: "일반공격 3회마다 스킬 충전량 +1초.", icon: "algorithm/delta-v.png" },
+    exploit: { label: "취약점 확장", type: "special", set2: "충전속도 +10%", set3: "디버프 효과를 지닌 적에게 주는 피해량 10% 상승. 대상이 가진 디버프 종류마다 자신이 주는 피해량 2% 상승. 최대 3회 중첩", icon: "algorithm/exploit.png" },
+    delivery: { label: "메모리 방출", type: "special", set2: "충전속도 +10%", set3: "스킬 발동 후, 모든 인형의 공격/연산력 +20%, 지속 7초, 중첩 불가능.", icon: "algorithm/delivery.png" },
+    flush: { label: "신속 정리", type: "special", set2: "충전속도 +10%", set3: "적에게 디버프를 부여할 때 그 적이 받는 피해량 +16% 상승, 지속 6초, 중첩 불가능.", icon: "algorithm/flush.png" },
+    "s-v-m": { label: "서포트 벡터", type: "special", set2: "치료효과 +7.5%", set3: "치료효과 +10%, 치료 대상의 체력이 45% 미만일 경우 치료효과 +30%.", icon: "algorithm/s-v-m.png" },
   },
   // 친밀도 스킬. values = Lv1~Lv5 수치, unit = 단위
   // 문장 예: "공격력 55 상승." / "회피율 8% 상승."
@@ -250,6 +252,15 @@ function getFullLabel(category, key) {
 function getIconUrl(category, key) {
   const item = getItem(category, key);
   return item && item.icon ? assetUrl(item.icon) : "";
+}
+
+// 알고리즘 세트 효과 [{ label: "2세트", text }, ...]
+function getAlgorithmSets(key) {
+  const item = getItem("algorithm", key);
+  if (!item) return [];
+  return [["2세트", item.set2], ["3세트", item.set3]]
+    .filter(([, text]) => text)
+    .map(([label, text]) => ({ label, text }));
 }
 
 // 구역(type)에 고를 수 있는 알고리즘 키 목록

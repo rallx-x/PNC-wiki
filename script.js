@@ -13,7 +13,19 @@
 /* ---------- 1. 기본 설정 / 기본값 ---------- */
 
 const APP_ID = "pnc_wiki_generator";
-const CURRENT_VERSION = 2;
+
+const ALGORITHM_SLOTS = 3; // 구역당 추천 알고리즘 칸 수
+const ALGORITHM_SUBS = 2; // 알고리즘 하나의 부 옵션 수 (게임 기준 최대 2)
+const ALGORITHM_TYPES = ["offense", "stability", "special"];
+
+function emptyAlgorithmSlot() {
+  return { key: "", main: "", sub: ["", ""] };
+}
+
+function emptyAlgorithmSlots() {
+  return [emptyAlgorithmSlot(), emptyAlgorithmSlot(), emptyAlgorithmSlot()];
+}
+const CURRENT_VERSION = 3;
 const STORAGE_KEY = "pnc_wiki_generator_autosave";
 
 // 사용자가 입력·선택하는 값만 둔다. (표시 이름, 번호 등 계산 가능한 값은 저장하지 않음)
@@ -47,14 +59,13 @@ const DEFAULT_STATE = {
   overview: {
     quote: "",
   },
-  // 추천 알고리즘: 구역별로 고른 키만 저장 (이름·이미지·수치는 GAME_DATA)
+  // 추천 알고리즘: 구역마다 알고리즘 3칸, 칸마다 주 옵션 1개 + 부 옵션 2개
+  // (이름·이미지·세트 효과·수치는 GAME_DATA. 여기에는 고른 키만)
   algorithm: {
-    offense: { slots: ["", "", ""], main: "", sub: [] },
-    stability: { slots: ["", "", ""], main: "", sub: [] },
-    special: { slots: ["", "", ""], main: "", sub: [] },
-    // slots = GAME_DATA.algorithm 키 3칸 (같은 구역 안 중복 없음)
-    // main  = 주 옵션 attribute 키 1개 ("" = 미선택)
-    // sub   = 부 옵션 attribute 키 목록 (고른 순서대로)
+    offense: { slots: emptyAlgorithmSlots() },
+    stability: { slots: emptyAlgorithmSlots() },
+    special: { slots: emptyAlgorithmSlots() },
+    // slot = { key: 알고리즘 키, main: 주 옵션 attribute 키, sub: [부 옵션1, 부 옵션2] } ("" = 미선택)
   },
   // 친밀도: 고른 키만 저장. 수치·문장·이미지·등급은 GAME_DATA에서 가져옴
   intimacy: {
@@ -78,8 +89,6 @@ const DEFAULT_STATE = {
 // 문단 순서·제목(SECTION_DEFS)과 문서 그리기는 renderer.js에 있음.
 
 const MAX_POSITIONS = 2; // 포지션 최대 선택 수
-const ALGORITHM_SLOTS = 3; // 구역당 추천 알고리즘 칸 수
-const ALGORITHM_TYPES = ["offense", "stability", "special"];
 const INTIMACY_SLOTS = 3; // 선택 친밀도 스킬 칸 수 (서약 스킬 제외)
 
 let state = cloneDefaults();
@@ -186,7 +195,29 @@ const MIGRATIONS = {
     next.profile = profile;
     return next;
   },
-  // 다음에 구조가 바뀌면 여기에 2: (old) => ({ ... }) 추가
+  // v2 → v3: 추천 알고리즘 주/부 옵션이 "구역 하나"에서 "알고리즘 칸마다"로 바뀜
+  //   구역의 주/부 옵션은 그 구역에서 처음 채워진 알고리즘 칸으로 옮김 (부 옵션은 앞 2개)
+  2: (old) => {
+    const next = { ...old, version: 3 };
+    const algorithm = isPlainObject(old.algorithm) ? old.algorithm : {};
+    next.algorithm = {};
+    ["offense", "stability", "special"].forEach((type) => {
+      const zone = isPlainObject(algorithm[type]) ? algorithm[type] : {};
+      const keys = Array.isArray(zone.slots) ? zone.slots : [];
+      const firstFilled = keys.findIndex((k) => typeof k === "string" && k);
+      const target = firstFilled === -1 ? 0 : firstFilled;
+      const sub = Array.isArray(zone.sub) ? zone.sub.filter((k) => typeof k === "string").slice(0, 2) : [];
+      next.algorithm[type] = {
+        slots: [0, 1, 2].map((i) => ({
+          key: typeof keys[i] === "string" ? keys[i] : "",
+          main: i === target && typeof zone.main === "string" ? zone.main : "",
+          sub: i === target ? sub : [],
+        })),
+      };
+    });
+    return next;
+  },
+  // 다음에 구조가 바뀌면 여기에 3: (old) => ({ ... }) 추가
 };
 
 // 어떤 데이터든 현재 state 형태로 바꿔서 돌려준다. 못 쓰는 데이터면 오류.
@@ -245,18 +276,27 @@ function normalizeState(st) {
   // 같은 선물이 좋아함·싫어함에 동시에 있으면 좋아함만 남김
   st.profile.positions = unique(st.profile.positions).slice(0, MAX_POSITIONS);
 
-  // 추천 알고리즘: 칸 수 3, 같은 구역 중복은 뒤쪽 칸을 비움, 부 옵션 중복 제거
+  // 추천 알고리즘: 칸 3개, 칸 모양 정리, 같은 구역 알고리즘 중복은 뒤 칸 비움,
+  // 부 옵션은 2칸 고정 (같은 칸 안 중복은 뒤쪽 비움)
   ALGORITHM_TYPES.forEach((type) => {
-    const zone = st.algorithm[type];
+    const zone = isPlainObject(st.algorithm[type]) ? st.algorithm[type] : {};
+    const raw = Array.isArray(zone.slots) ? zone.slots.slice(0, ALGORITHM_SLOTS) : [];
     const seen = new Set();
-    const slots = strings(zone.slots).slice(0, ALGORITHM_SLOTS).map((key) => {
-      if (!key || seen.has(key)) return "";
-      seen.add(key);
-      return key;
+    const slots = raw.map((slot) => {
+      const s = isPlainObject(slot) ? slot : {};
+      let key = typeof s.key === "string" ? s.key : "";
+      if (key && seen.has(key)) key = "";
+      if (key) seen.add(key);
+      const subRaw = Array.isArray(s.sub) ? s.sub : [];
+      const sub = [];
+      for (let i = 0; i < ALGORITHM_SUBS; i += 1) {
+        const v = typeof subRaw[i] === "string" ? subRaw[i] : "";
+        sub.push(v && sub.includes(v) ? "" : v);
+      }
+      return { key, main: typeof s.main === "string" ? s.main : "", sub };
     });
-    while (slots.length < ALGORITHM_SLOTS) slots.push("");
-    zone.slots = slots;
-    zone.sub = unique(zone.sub);
+    while (slots.length < ALGORITHM_SLOTS) slots.push(emptyAlgorithmSlot());
+    st.algorithm[type] = { slots };
   });
 
   const like = unique(st.intimacy.gifts.like);
@@ -424,7 +464,16 @@ function fillPositionPicker() {
     `선택 ${chosen.length}/${MAX_POSITIONS}` + (order ? ` · 표시 순서: ${order}` : "");
 }
 
-// 추천 알고리즘 입력: 구역마다 [알고리즘 3칸] [주 옵션] [부 옵션 체크]
+// 추천 알고리즘 입력: 구역마다 알고리즘 카드 3개
+//   카드 = [아이콘][알고리즘 선택] → 세트 효과 설명 → 주 옵션 → 부 옵션 1·2
+function makeSelect(field, noneLabel, options) {
+  const select = document.createElement("select");
+  select.dataset.field = field;
+  select.appendChild(new Option(noneLabel, ""));
+  options.forEach(([value, text]) => select.appendChild(new Option(text, value)));
+  return select;
+}
+
 function buildAlgorithmPicker() {
   const box = document.getElementById("algorithmPicker");
   box.innerHTML = "";
@@ -440,89 +489,83 @@ function buildAlgorithmPicker() {
     title.style.borderLeftColor = typeItem.accent;
     zone.appendChild(title);
 
-    // 알고리즘 3칸: [미리보기 아이콘] [select]
-    for (let i = 0; i < ALGORITHM_SLOTS; i += 1) {
-      const row = document.createElement("div");
-      row.className = "algo-slot-row";
+    const algoOptions = getAlgorithmsOfType(type).map((key) => [key, getLabel("algorithm", key)]);
+    const mainOptions = getAllowedOptions(type, "main").map((key) => [key, getLabel("attribute", key)]);
+    const subOptions = getAllowedOptions(type, "sub").map((key) => [key, getLabel("attribute", key)]);
 
+    for (let i = 0; i < ALGORITHM_SLOTS; i += 1) {
+      const base = `algorithm.${type}.slots.${i}`;
+      const card = document.createElement("div");
+      card.className = "algo-card";
+
+      const head = document.createElement("div");
+      head.className = "algo-slot-row";
       const thumb = document.createElement("span");
       thumb.className = "algo-thumb";
       thumb.style.background = typeItem.accent;
       thumb.dataset.algoThumb = `${type}.${i}`;
+      head.append(thumb, makeSelect(`${base}.key`, `알고리즘 ${i + 1} — 선택 안 함`, algoOptions));
 
-      const select = document.createElement("select");
-      select.dataset.field = `algorithm.${type}.slots.${i}`;
-      select.appendChild(new Option(`알고리즘 ${i + 1} — 선택 안 함`, ""));
-      getAlgorithmsOfType(type).forEach((key) => {
-        select.appendChild(new Option(getLabel("algorithm", key), key));
-      });
+      // 세트 효과 (알고리즘을 고르면 채워짐)
+      const desc = document.createElement("div");
+      desc.className = "algo-desc";
+      desc.dataset.algoDesc = `${type}.${i}`;
 
-      row.append(thumb, select);
-      zone.appendChild(row);
+      const optionRow = document.createElement("div");
+      optionRow.className = "algo-option-row";
+      const mainBox = document.createElement("label");
+      mainBox.append(document.createTextNode("주 옵션"), makeSelect(`${base}.main`, "선택 안 함", mainOptions));
+      const sub1 = document.createElement("label");
+      sub1.append(document.createTextNode("부 옵션 1"), makeSelect(`${base}.sub.0`, "선택 안 함", subOptions));
+      const sub2 = document.createElement("label");
+      sub2.append(document.createTextNode("부 옵션 2"), makeSelect(`${base}.sub.1`, "선택 안 함", subOptions));
+      optionRow.append(mainBox, sub1, sub2);
+
+      card.append(head, desc, optionRow);
+      zone.appendChild(card);
     }
-
-    // 주 옵션: select 1개 (이 구역 후보만)
-    const mainLabel = document.createElement("div");
-    mainLabel.className = "algo-sub-title";
-    mainLabel.textContent = "주 옵션";
-    const main = document.createElement("select");
-    main.dataset.field = `algorithm.${type}.main`;
-    main.appendChild(new Option("선택 안 함", ""));
-    getAllowedOptions(type, "main").forEach((key) => {
-      main.appendChild(new Option(getLabel("attribute", key), key));
-    });
-    zone.append(mainLabel, main);
-
-    // 부 옵션: 체크 여러 개 (이 구역 후보만, 고른 순서 저장)
-    const subLabel = document.createElement("div");
-    subLabel.className = "algo-sub-title";
-    subLabel.textContent = "부 옵션 (여러 개 선택, 고른 순서대로 표시)";
-    const subBox = document.createElement("div");
-    subBox.className = "algo-sub-grid";
-    getAllowedOptions(type, "sub").forEach((key) => {
-      const label = document.createElement("label");
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.value = key;
-      input.dataset.algoSub = type;
-      const icon = document.createElement("img");
-      icon.src = getIconUrl("attribute", key);
-      icon.alt = "";
-      label.append(input, icon, document.createTextNode(getLabel("attribute", key)));
-      subBox.appendChild(label);
-    });
-    const subSummary = document.createElement("div");
-    subSummary.className = "gift-summary";
-    subSummary.dataset.algoSubSummary = type;
-    zone.append(subLabel, subSummary, subBox);
 
     box.appendChild(zone);
   });
 }
 
-// state → 알고리즘 입력 (아이콘 미리보기, 같은 구역 중복 막기, 부 옵션 체크)
+// state → 알고리즘 입력 (아이콘·세트 효과, 같은 구역 알고리즘 중복 막기, 부 옵션 1·2 중복 막기)
 function fillAlgorithmPicker() {
   ALGORITHM_TYPES.forEach((type) => {
-    const zone = state.algorithm[type];
+    const slots = state.algorithm[type].slots;
+    const chosenKeys = slots.map((slot) => slot.key);
 
-    zone.slots.forEach((key, i) => {
+    slots.forEach((slot, i) => {
+      const base = `algorithm.${type}.slots.${i}`;
+
       const thumb = document.querySelector(`[data-algo-thumb="${type}.${i}"]`);
-      const url = getIconUrl("algorithm", key);
+      const url = getIconUrl("algorithm", slot.key);
       thumb.innerHTML = url ? `<img src="${url}" alt="">` : "";
 
-      // 다른 칸에서 이미 고른 알고리즘은 이 칸에서 고를 수 없게
-      const select = document.querySelector(`[data-field="algorithm.${type}.slots.${i}"]`);
-      [...select.options].forEach((option) => {
-        option.disabled = Boolean(option.value) && option.value !== key && zone.slots.includes(option.value);
+      const desc = document.querySelector(`[data-algo-desc="${type}.${i}"]`);
+      desc.innerHTML = "";
+      getAlgorithmSets(slot.key).forEach((set) => {
+        const line = document.createElement("div");
+        const tag = document.createElement("b");
+        tag.textContent = set.label;
+        line.append(tag, document.createTextNode(` ${set.text}`));
+        desc.appendChild(line);
+      });
+      desc.hidden = !desc.childNodes.length;
+
+      const keySelect = document.querySelector(`[data-field="${base}.key"]`);
+      [...keySelect.options].forEach((option) => {
+        option.disabled = Boolean(option.value) && option.value !== slot.key && chosenKeys.includes(option.value);
+      });
+
+      [0, 1].forEach((n) => {
+        const subSelect = document.querySelector(`[data-field="${base}.sub.${n}"]`);
+        const other = slot.sub[1 - n];
+        [...subSelect.options].forEach((option) => {
+          option.disabled = Boolean(option.value) && option.value === other;
+        });
       });
     });
-
-    document.querySelectorAll(`[data-algo-sub="${type}"]`).forEach((input) => {
-      input.checked = zone.sub.includes(input.value);
-    });
-    const order = zone.sub.map((key) => getLabel("attribute", key) || key).join(" → ");
-    document.querySelector(`[data-algo-sub-summary="${type}"]`).textContent =
-      order ? `선택 ${zone.sub.length}개 · ${order}` : "선택 0개";
   });
 }
 
@@ -679,17 +722,6 @@ function handleInput(event) {
     if (el.checked && chosen.length < MAX_POSITIONS) chosen.push(key);
     state.profile.positions = chosen;
     fillPositionPicker();
-    saveToLocalStorage();
-    render();
-    return;
-  }
-
-  // 추천 알고리즘 부 옵션 (data-field가 아닌 별도 처리)
-  if (el.dataset && el.dataset.algoSub) {
-    const zone = state.algorithm[el.dataset.algoSub];
-    zone.sub = zone.sub.filter((k) => k !== el.value);
-    if (el.checked) zone.sub.push(el.value);
-    fillAlgorithmPicker();
     saveToLocalStorage();
     render();
     return;

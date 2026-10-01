@@ -128,14 +128,13 @@ const S = {
   // 추천 알고리즘 (나무위키 템플릿: 구역마다 폭 500px 표, 테두리 2px #2e2e2e)
   algoZone: `box-sizing:border-box;max-width:500px;margin:0 0 16px;border:2px solid ${C.algoHead};background:${C.white};color:${C.infoText};`,
   algoHead: `padding:6px;background:${C.algoHead};color:${C.white};font-weight:700;text-align:center;`,
-  algoRow: `display:grid;grid-template-columns:1fr 1fr 1fr;`,
+  algoRow: `display:grid;grid-template-columns:72px 1fr 1fr 1fr;border-top:1px solid ${C.infoLine};`,
+  algoRowLabel: `display:flex;align-items:center;justify-content:center;padding:4px;background:${C.tableHead};font-size:13px;text-align:center;`,
   algoImageCell: `box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-height:80px;padding:8px;`,
   algoBadge: `display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;`,
   algoImg: `display:block;width:56px;height:56px;margin:0;border:0;object-fit:contain;`,
   algoNameCell: `padding:4px 6px;background:${C.algoNames};color:${C.white};text-align:center;font-size:14px;`,
-  algoOptions: `display:grid;grid-template-columns:15% 25% 15% 45%;border-top:1px solid ${C.infoLine};`,
-  algoOptionLabel: `display:flex;align-items:center;justify-content:center;padding:6px;background:${C.tableHead};font-size:14px;text-align:center;`,
-  algoOptionValue: `display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 8px;font-size:13px;`,
+  algoOptionValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;text-align:center;`,
   optionChip: `display:inline-flex;align-items:center;gap:4px;white-space:nowrap;`,
   optionIcon: `display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:${C.infoIconBg};border-radius:4px;`,
   optionIconImg: `display:block;width:18px;height:18px;margin:0;border:0;object-fit:contain;`,
@@ -398,46 +397,42 @@ function optionChip(key) {
   return `<span style="${S.optionChip}">${icon}${esc(getLabel("attribute", key))}</span>`;
 }
 
+// 구역 표: 알고리즘마다 한 열 (이미지 / 이름 / 주 옵션 / 부 옵션)
 function renderAlgorithmZone(type, zone) {
   const typeItem = GAME_DATA.algorithmType[type];
+  const allowedMain = getAllowedOptions(type, "main");
+  const allowedSub = getAllowedOptions(type, "sub");
 
-  // 이 구역 type의 알고리즘만, 같은 키 중복 없이 3칸
+  // 이 구역 type의 알고리즘만, 같은 키 중복 없이. 옵션은 이 구역 후보에 있는 것만
   const seen = new Set();
-  const slots = [0, 1, 2].map((i) => {
-    const key = zone.slots[i];
-    const item = getItem("algorithm", key);
-    if (!item || item.type !== type || seen.has(key)) return null;
-    seen.add(key);
-    return { key, item };
+  const cols = [0, 1, 2].map((i) => {
+    const slot = zone.slots[i] || {};
+    const item = getItem("algorithm", slot.key);
+    if (!item || item.type !== type || seen.has(slot.key)) return null;
+    seen.add(slot.key);
+    const main = allowedMain.includes(slot.main) && getItem("attribute", slot.main) ? slot.main : "";
+    const sub = (slot.sub || []).filter((key) => key && allowedSub.includes(key) && getItem("attribute", key));
+    return { key: slot.key, item, main, sub };
   });
 
-  const images = slots
-    .map((slot) => {
-      const inner = slot
-        ? `<span style="${S.algoBadge}background:${typeItem.accent};">${img(getIconUrl("algorithm", slot.key), slot.item.label, S.algoImg)}</span>`
-        : "";
-      return `<div style="${S.algoImageCell}">${inner}</div>`;
-    })
-    .join("");
-  const names = slots
-    .map((slot) => `<div style="${S.algoNameCell}">${slot ? esc(slot.item.label) : "-"}</div>`)
-    .join("");
-
-  // 옵션은 이 구역 후보에 있는 것만 (후보 밖 값은 표시하지 않음)
-  const mainOk = getAllowedOptions(type, "main").includes(zone.main) && getItem("attribute", zone.main);
-  const subs = zone.sub.filter((key) => getAllowedOptions(type, "sub").includes(key) && getItem("attribute", key));
+  const cell = (style, html) => `<div style="${style}">${html}</div>`;
+  const row = (label, style, render) =>
+    `<div style="${S.algoRow}">${cell(S.algoRowLabel, label)}${cols.map((col) => cell(style, render(col))).join("")}</div>`;
 
   return `
 <div class="pncwiki-algo-zone" style="${S.algoZone}">
   <div style="${S.algoHead}">${esc(typeItem.label)}</div>
-  <div style="${S.algoRow}background:${typeItem.tint};">${images}</div>
-  <div style="${S.algoRow}">${names}</div>
-  <div style="${S.algoOptions}">
-    <div style="${S.algoOptionLabel}">주 옵션</div>
-    <div style="${S.algoOptionValue}">${mainOk ? optionChip(zone.main) : "-"}</div>
-    <div style="${S.algoOptionLabel}">부 옵션</div>
-    <div style="${S.algoOptionValue}">${subs.length ? subs.map(optionChip).join("") : "-"}</div>
-  </div>
+  <div style="${S.algoRow}background:${typeItem.tint};">${cell(S.algoRowLabel + "background:transparent;", "")}${cols
+    .map((col) =>
+      cell(
+        S.algoImageCell,
+        col ? `<span style="${S.algoBadge}background:${typeItem.accent};">${img(getIconUrl("algorithm", col.key), col.item.label, S.algoImg)}</span>` : ""
+      )
+    )
+    .join("")}</div>
+  ${row("알고리즘", S.algoNameCell, (col) => (col ? esc(col.item.label) : "-"))}
+  ${row("주 옵션", S.algoOptionValue, (col) => (col && col.main ? optionChip(col.main) : "-"))}
+  ${row("부 옵션", S.algoOptionValue, (col) => (col && col.sub.length ? col.sub.map(optionChip).join("") : "-"))}
 </div>`;
 }
 
