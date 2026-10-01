@@ -406,7 +406,7 @@ function renderProfile() {
   preview.job.textContent = valueOrDash(p.job);
   preview.model.textContent = valueOrDash(p.model);
   renderIconValue(preview.company, "company", p.company);
-  preview.classType.textContent = valueOrDash(getLabel("class", p.class));
+  renderIconValue(preview.classType, "class", p.class);
   preview.birthday.textContent = valueOrDash(getBirthdayText(p.birthday));
   preview.history.textContent = valueOrDash(p.history);
 }

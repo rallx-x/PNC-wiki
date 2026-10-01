@@ -15,18 +15,30 @@ function assetUrl(path) {
 const GAME_DATA = {
   company: {
     "42lab": { label: "42LAB", icon: "company/42lab.png" },
-    svarog: { label: "스바로그" },
-    ultimatelife: { label: "얼티라이프" },
-    uas: { label: "UAS" },
-    cybermedia: { label: "사이버미디어" },
+    svarog: { label: "스바로그", icon: "company/svarog.png" },
+    ultimatelife: { label: "얼티라이프", icon: "company/ultimatelife.png" },
+    uas: { label: "UAS", icon: "company/uas.png" },
+    cybermedia: { label: "사이버미디어", icon: "company/cybermedia.png" },
+    sanctifier: { label: "정화자", icon: "company/sanctifier.png" },
+    entropics: { label: "엔트로피", icon: "company/entropics.png" },
+    alternatives: { label: "특수", icon: "company/alternatives.png" },
   },
 
   class: {
-    guard: { label: "수위" },
-    warrior: { label: "전사" },
-    specialist: { label: "해결사" },
-    medic: { label: "치료사" },
-    sniper: { label: "사수" },
+    guard: { label: "수위", icon: "class/guard.png" },
+    warrior: { label: "전사", icon: "class/warrior.png" },
+    specialist: { label: "해결사", icon: "class/specialist.png" },
+    medic: { label: "치료사", icon: "class/medic.png" },
+    sniper: { label: "사수", icon: "class/sniper.png" },
+  },
+
+  position: {
+    attack: { label: "공격", icon: "position/attack.png" },
+    support: { label: "보조", icon: "position/support.png" },
+    defense: { label: "수비", icon: "position/defense.png" },
+    assassin: { label: "암살", icon: "position/assassin.png" },
+    control: { label: "제어", icon: "position/control.png" },
+    healing: { label: "회복", icon: "position/healing.png" },
   },
 
   gift: {},
