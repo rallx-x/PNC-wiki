@@ -222,6 +222,11 @@ body {
   font-weight: 700;
 }
 
+#positionPicker label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .section-toggle-grid label:has(input:disabled) {
   opacity: 0.75;
   cursor: not-allowed;
@@ -256,8 +261,177 @@ body {
   margin-top: 16px;
 }
 
-.rarity-grid {
-  grid-template-columns: 1fr 1fr 1fr;
+/* 추천 알고리즘 입력 */
+.algo-zone {
+  margin-bottom: 22px;
+}
+
+.algo-zone-title {
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 4px solid;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.algo-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.algo-thumb {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+.algo-thumb img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.algo-sub-title {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub-text);
+}
+
+.algo-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.form-group .algo-sub-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.algo-sub-grid input {
+  width: auto;
+  accent-color: var(--accent);
+}
+
+.algo-sub-grid img {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 4px;
+  background: #1d2327;
+  object-fit: contain;
+}
+
+.form-group .algo-sub-grid label:has(input:checked) {
+  border-color: var(--accent);
+  background: #f0efff;
+  color: var(--accent);
+}
+
+/* 친밀도: 스킬 칸 (칸 이름 위, 선택 아래) */
+.form-group .skill-slot-row span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--sub-text);
+}
+
+.form-group .skill-slot-row {
+  margin-bottom: 12px;
+}
+
+.skill-oath-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f8fa;
+  font-size: 13px;
+  color: var(--sub-text);
+}
+
+/* 친밀도: 선물 반응 선택 */
+.gift-summary {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--sub-text);
+}
+
+.gift-tier-title {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gift-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--panel-soft);
+}
+
+.gift-thumb {
+  width: 40px;
+  height: 40px;
+  border: 2px solid;
+  border-radius: 4px;
+  background: #2b2b2b;
+  object-fit: contain;
+}
+
+.gift-name {
+  font-size: 14px;
+}
+
+.gift-choice {
+  display: flex;
+  gap: 4px;
+}
+
+.form-group .gift-choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gift-choice input {
+  display: none;
+}
+
+.gift-choice img {
+  width: 16px;
+  height: 16px;
+}
+
+.form-group .gift-choice label:has(input:checked) {
+  border-color: var(--accent);
+  background: #f0efff;
+  color: var(--accent);
 }
 
 .form-group textarea {

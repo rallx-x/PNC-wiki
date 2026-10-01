@@ -71,6 +71,11 @@
                     <label>기업</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
+                            <input type="radio" name="profile.company" data-field="profile.company" value="" />
+                            선택 안 함
+                        </label>
+
+                        <label>
                             <input type="radio" name="profile.company" data-field="profile.company" value="42lab" />
                             42LAB
                         </label>
@@ -116,6 +121,11 @@
                     <label>클래스</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
+                            <input type="radio" name="profile.class" data-field="profile.class" value="" />
+                            선택 안 함
+                        </label>
+
+                        <label>
                             <input type="radio" name="profile.class" data-field="profile.class" value="guard" />
                             수위
                         </label>
@@ -143,14 +153,20 @@
                 </div>
 
                 <div class="form-group">
-                    <label>포지션</label>
-                    <!-- 선택지는 GAME_DATA.position으로 자동 생성 -->
-                    <div class="checkbox-grid radio-grid" data-options="position" data-options-field="profile.position"></div>
+                    <label>포지션 (최대 2개)</label>
+                    <!-- 체크박스는 GAME_DATA.position으로 자동 생성. 여러 개 선택, 고른 순서대로 표시 -->
+                    <div class="gift-summary" id="positionSummary"></div>
+                    <div class="checkbox-grid radio-grid" id="positionPicker"></div>
                 </div>
 
                 <div class="form-group">
                     <label>레어도</label>
                     <div class="checkbox-grid radio-grid rarity-grid">
+                        <label>
+                            <input type="radio" name="profile.rarity" data-field="profile.rarity" value="" />
+                            선택 안 함
+                        </label>
+
                         <label>
                             <input type="radio" name="profile.rarity" data-field="profile.rarity" value="1" />
                             ★1
@@ -224,6 +240,28 @@
                 <div class="form-group">
                     <label for="dollQuote">인용문</label>
                     <textarea id="dollQuote" rows="4" data-field="overview.quote"></textarea>
+                </div>
+
+                <div class="form-section-title">추천 알고리즘</div>
+
+                <div class="form-group">
+                    <!-- 구역·선택지는 script.js가 GAME_DATA로 자동 생성 -->
+                    <div id="algorithmPicker"></div>
+                </div>
+
+                <div class="form-section-title">친밀도</div>
+
+                <div class="form-group">
+                    <label>친밀도 스킬</label>
+                    <!-- 칸과 선택지는 script.js가 GAME_DATA.intimacy로 자동 생성 -->
+                    <div id="intimacySkillSlots"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>선물 반응</label>
+                    <!-- 선물 목록은 script.js가 GAME_DATA.gift로 자동 생성 -->
+                    <div class="gift-summary" id="giftSummary"></div>
+                    <div id="giftPicker"></div>
                 </div>
 
                 <div class="form-section-title">문단 설정</div>

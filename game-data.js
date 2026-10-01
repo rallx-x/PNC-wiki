@@ -13,15 +13,19 @@ function assetUrl(path) {
 }
 
 const GAME_DATA = {
+  // label = 짧은 이름 (입력 UI, 피험 인형 프로필 카드)
+  // fullLabel = 정식 명칭 (상단 정보 표). 없으면 label을 씀
+  // color = 상단 정보 표 로고 칸 배경색
+  // (fullLabel·color 출처: 나무위키 「템플릿:뉴럴 클라우드 인형」)
   company: {
-    "42lab": { label: "42LAB", icon: "company/42lab.png" },
-    svarog: { label: "스바로그", icon: "company/svarog.png" },
-    ultimatelife: { label: "얼티라이프", icon: "company/ultimatelife.png" },
-    uas: { label: "UAS", icon: "company/uas.png" },
-    cybermedia: { label: "사이버미디어", icon: "company/cybermedia.png" },
-    sanctifier: { label: "정화자", icon: "company/sanctifier.png" },
-    entropics: { label: "엔트로피", icon: "company/entropics.png" },
-    alternatives: { label: "특수", icon: "company/alternatives.png" },
+    "42lab": { label: "42LAB", color: "#909090", icon: "company/42lab.png" },
+    svarog: { label: "스바로그", fullLabel: "스바로그 중공업", color: "#a40000", icon: "company/svarog.png" },
+    ultimatelife: { label: "얼티라이프", fullLabel: "얼티라이프 홀딩스", color: "#30dff3", icon: "company/ultimatelife.png" },
+    uas: { label: "UAS", fullLabel: "유니버설 애니씽 서비스", color: "#ff8400", icon: "company/uas.png" },
+    cybermedia: { label: "사이버미디어", color: "#601986", icon: "company/cybermedia.png" },
+    sanctifier: { label: "정화자", color: "#0b1016", icon: "company/sanctifier.png" },
+    entropics: { label: "엔트로피", color: "#7640ca", icon: "company/entropics.png" },
+    alternatives: { label: "특수", color: "#726e6d", icon: "company/alternatives.png" },
   },
 
   class: {
@@ -115,11 +119,41 @@ const GAME_DATA = {
     "model-kit": { label: "프라모델", tier: 3, icon: "gift/model-kit.png" },
     "antique-sword": { label: "소장용 명검", tier: 3, icon: "gift/antique-sword.png" },
   },
-  // 추천 알고리즘. type: offense(공격성) / stability(안정성) / special(특이성)
+  // 추천 알고리즘 구역. tint = 이미지 줄 배경, accent = 알고리즘 아이콘 칸 배경
+  // (색 출처: 나무위키 「템플릿:뉴럴 클라우드 인형」 추천 알고리즘 표)
   algorithmType: {
-    offense: { label: "공격성" },
-    stability: { label: "안정성" },
-    special: { label: "특이성" },
+    offense: { label: "공격성", tint: "#e5b8b8", accent: "#bf3937" },
+    stability: { label: "안정성", tint: "#b8cce5", accent: "#3e7ac2" },
+    special: { label: "특이성", tint: "#b8e5c2", accent: "#48b961" },
+  },
+
+  // 구역별로 고를 수 있는 옵션 종류 (attribute 키). 수치는 다루지 않음.
+  // main = 주 옵션 후보, sub = 부 옵션 후보 (사용자 제공 「주요 수치」「부가 수치」 표 기준)
+  algorithmOptionRules: {
+    offense: {
+      main: ["atk", "hashrate", "physical-penetration", "operand-penetration"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "post-battle-hp", "debuff-resistance", "damage-boost",
+      ],
+    },
+    stability: {
+      main: ["max-hp", "physical-def", "operand-def", "post-battle-hp"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "post-battle-hp", "debuff-resistance", "injury-mitigation",
+      ],
+    },
+    special: {
+      main: ["physical-def", "operand-def", "crit-rate", "crit-damage", "healing-effect", "skill-haste"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "dodge-rate", "post-battle-hp", "debuff-resistance", "healing-effect", "skill-haste",
+      ],
+    },
   },
 
   algorithm: {
@@ -206,10 +240,27 @@ function getLabel(category, key) {
   return item ? item.label : "";
 }
 
+// 키 → 정식 명칭. fullLabel이 없으면 label.
+function getFullLabel(category, key) {
+  const item = getItem(category, key);
+  return item ? item.fullLabel || item.label : "";
+}
+
 // 키 → 이미지 전체 주소. 이미지가 없으면 빈 문자열.
 function getIconUrl(category, key) {
   const item = getItem(category, key);
   return item && item.icon ? assetUrl(item.icon) : "";
+}
+
+// 구역(type)에 고를 수 있는 알고리즘 키 목록
+function getAlgorithmsOfType(type) {
+  return Object.keys(GAME_DATA.algorithm).filter((key) => GAME_DATA.algorithm[key].type === type);
+}
+
+// 구역의 주/부 옵션 후보 (kind = "main" | "sub")
+function getAllowedOptions(type, kind) {
+  const rule = GAME_DATA.algorithmOptionRules[type];
+  return rule && Array.isArray(rule[kind]) ? rule[kind] : [];
 }
 
 // 친밀도 스킬 효과 문장. 예: getIntimacyText("output-enhancement", 5) → "공격력 55 상승."

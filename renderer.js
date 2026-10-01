@@ -61,8 +61,14 @@ const C = {
   quoteBar: "#999999",
   orange: "#ec9f19",
   iconBg: "#2b2b2b",
+  infoIconBg: "#1d2327", // 정보 표 클래스·포지션 아이콘 칸 (흰 아이콘이라 어두운 칸)
   infoLabel: "#909090", // 나무위키 템플릿 정보 표 제목칸
   infoText: "#373a3c",
+  tableHead: "#eeeeee", // 나무위키 템플릿 표 머리줄
+  algoHead: "#2e2e2e", // 추천 알고리즘 구역 머리줄·테두리
+  algoNames: "#6a6a6a", // 추천 알고리즘 이름 줄
+  lvBadge: "#202128", // 친밀도 Lv 배지
+  lvValue: "#ffa500", // 친밀도 수치 강조
   infoLine: "#cccccc",
   white: "#ffffff",
 };
@@ -93,11 +99,46 @@ const S = {
   infoLabel: `display:flex;align-items:center;justify-content:center;padding:8px;background:${C.infoLabel};color:${C.white};font-weight:700;text-align:center;`,
   infoValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;background:${C.white};color:${C.infoText};text-align:center;word-break:keep-all;`,
   infoIcons: `display:flex;justify-content:center;gap:4px;`,
-  infoClassBadge: `display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;background:${C.iconBg};border-radius:6px;`,
+  infoClassBadge: `display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;background:${C.infoIconBg};border-radius:6px;`,
   infoClassImg: `display:block;width:42px;height:42px;margin:0;border:0;object-fit:contain;`,
   infoCompanyBadge: `display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:80px;height:80px;padding:1px;border-radius:6px;`,
   infoCompanyImg: `display:block;width:100%;height:100%;margin:0;border:0;object-fit:contain;`,
+  infoAccent: `color:${C.orange};`, // 성우·일러스트 이름 강조 (링크 아님)
   infoFlag: `display:inline-block;width:20px;height:14px;margin:0 6px 0 0;border:0;vertical-align:middle;object-fit:cover;`,
+
+  // 친밀도 (나무위키 템플릿: 폭 600px 표, 머리줄 #eee, Lv 배지 + 주황 수치)
+  intimacy: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:600px;border:1px solid ${C.infoLine};background:${C.infoLine};color:${C.infoText};`,
+  intimacyHead: `display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;background:${C.tableHead};text-align:center;`,
+  intimacyRow: `display:grid;grid-template-columns:24px 80px 1fr;gap:1px;`,
+  intimacyCell: `display:flex;align-items:center;justify-content:center;padding:6px;background:${C.white};text-align:center;`,
+  intimacyLevels: `padding:6px 10px;background:${C.white};text-align:left;line-height:1.9;`,
+  intimacyIcon: `position:relative;width:60px;height:60px;margin:0 auto;`,
+  intimacyIconImg: `position:absolute;top:0;left:0;display:block;width:60px;height:60px;margin:0;border:0;object-fit:contain;`,
+  intimacyName: `margin:2px 0 0;font-size:14px;font-weight:700;`,
+  lvBadge: `display:inline-block;height:16px;margin:0 5px 0 0;padding:0 7px;background:${C.lvBadge};color:${C.white};border-radius:3px;font-size:12px;line-height:16px;letter-spacing:-0.5px;vertical-align:middle;`,
+  lvValue: `color:${C.lvValue};`,
+  empty: `padding:8px;background:${C.white};text-align:center;`,
+  reactionIcon: `display:inline-block;width:18px;height:18px;margin:0;border:0;vertical-align:middle;`,
+  giftList: `display:flex;flex-wrap:wrap;gap:10px;padding:10px;background:${C.white};`,
+  giftCard: `width:72px;text-align:center;`,
+  giftBox: `box-sizing:border-box;width:64px;height:64px;margin:0 auto;padding:2px;border:2px solid;border-radius:4px;background:${C.iconBg};`,
+  giftImg: `display:block;width:100%;height:100%;margin:0;border:0;object-fit:contain;`,
+  giftName: `margin:4px 0 0;font-size:12px;line-height:1.3;word-break:keep-all;`,
+
+  // 추천 알고리즘 (나무위키 템플릿: 구역마다 폭 500px 표, 테두리 2px #2e2e2e)
+  algoZone: `box-sizing:border-box;max-width:500px;margin:0 0 16px;border:2px solid ${C.algoHead};background:${C.white};color:${C.infoText};`,
+  algoHead: `padding:6px;background:${C.algoHead};color:${C.white};font-weight:700;text-align:center;`,
+  algoRow: `display:grid;grid-template-columns:1fr 1fr 1fr;`,
+  algoImageCell: `box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-height:80px;padding:8px;`,
+  algoBadge: `display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;`,
+  algoImg: `display:block;width:56px;height:56px;margin:0;border:0;object-fit:contain;`,
+  algoNameCell: `padding:4px 6px;background:${C.algoNames};color:${C.white};text-align:center;font-size:14px;`,
+  algoOptions: `display:grid;grid-template-columns:15% 25% 15% 45%;border-top:1px solid ${C.infoLine};`,
+  algoOptionLabel: `display:flex;align-items:center;justify-content:center;padding:6px;background:${C.tableHead};font-size:14px;text-align:center;`,
+  algoOptionValue: `display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 8px;font-size:13px;`,
+  optionChip: `display:inline-flex;align-items:center;gap:4px;white-space:nowrap;`,
+  optionIcon: `display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:${C.infoIconBg};border-radius:4px;`,
+  optionIconImg: `display:block;width:18px;height:18px;margin:0;border:0;object-fit:contain;`,
 
   // 인용문
   quote: `margin:0 0 24px;padding:14px 16px;border-left:4px solid ${C.quoteBar};background:transparent;color:${C.text};line-height:1.7;`,
@@ -226,13 +267,15 @@ function infoBadge(category, key, badgeStyle, imgStyle, bg) {
   return `<span style="${badgeStyle}${bg ? `background:${bg};` : ""}">${img(url, getLabel(category, key), imgStyle)}</span>`;
 }
 
+// [클래스][포지션…] 아이콘 + "해결사 | 공격 · 수비" (포지션은 고른 순서대로, 없는 키는 건너뜀)
 function infoClassCell(p) {
+  const positions = p.positions.filter((key) => getItem("position", key));
   const icons =
     infoBadge("class", p.class, S.infoClassBadge, S.infoClassImg) +
-    infoBadge("position", p.position, S.infoClassBadge, S.infoClassImg);
-  const text = [getLabel("class", p.class), getLabel("position", p.position)]
+    positions.map((key) => infoBadge("position", key, S.infoClassBadge, S.infoClassImg)).join("");
+  const positionText = positions.map((key) => esc(getLabel("position", key))).join(" · ");
+  const text = [esc(getLabel("class", p.class)), positionText]
     .filter(Boolean)
-    .map(esc)
     .join(" | ");
   return `${icons ? `<div style="${S.infoIcons}">${icons}</div>` : ""}<div>${text || "-"}</div>`;
 }
@@ -254,7 +297,12 @@ function infoVoice(p) {
   if (!name) return "-";
   const url = getIconUrl("country", v.country);
   const flag = url ? img(url, getLabel("country", v.country), S.infoFlag) : "";
-  return `<div>${flag}${esc(name)}</div>`;
+  return `<div>${flag}<span style="${S.infoAccent}">${esc(name)}</span></div>`;
+}
+
+function infoIllustrator(p) {
+  const name = String(p.illustrator || "").trim();
+  return name ? `<span style="${S.infoAccent}">${esc(name)}</span>` : "-";
 }
 
 function renderInfo(state) {
@@ -268,7 +316,7 @@ function renderInfo(state) {
   ${row("클래스", infoClassCell(p), "기업", infoCompanyCell(p))}
   ${row("레어도", infoRarity(p), "모델명", esc(textOrDash(p.model)))}
   ${row("직업", esc(textOrDash(p.job)), "생일", esc(textOrDash(formatBirthday(p.birthday))))}
-  ${row("성우", infoVoice(p), "일러스트", esc(textOrDash(p.illustrator)))}
+  ${row("성우", infoVoice(p), "일러스트", infoIllustrator(p))}
 </div>`;
 }
 
@@ -333,7 +381,140 @@ const SECTION_BODY = {
   },
 
   // 성능: 틀만 유지 (내용 구조화는 사용자 정리 후)
+
+  intimacy: (state) => renderIntimacy(state),
+
+  algorithm: (state) => renderAlgorithm(state),
 };
+
+/* ---------- 추천 알고리즘 ---------- */
+
+const ALGORITHM_ZONES = ["offense", "stability", "special"];
+
+// 능력치 아이콘 + 이름 (수치 없음)
+function optionChip(key) {
+  const url = getIconUrl("attribute", key);
+  const icon = url ? `<span style="${S.optionIcon}">${img(url, "", S.optionIconImg)}</span>` : "";
+  return `<span style="${S.optionChip}">${icon}${esc(getLabel("attribute", key))}</span>`;
+}
+
+function renderAlgorithmZone(type, zone) {
+  const typeItem = GAME_DATA.algorithmType[type];
+
+  // 이 구역 type의 알고리즘만, 같은 키 중복 없이 3칸
+  const seen = new Set();
+  const slots = [0, 1, 2].map((i) => {
+    const key = zone.slots[i];
+    const item = getItem("algorithm", key);
+    if (!item || item.type !== type || seen.has(key)) return null;
+    seen.add(key);
+    return { key, item };
+  });
+
+  const images = slots
+    .map((slot) => {
+      const inner = slot
+        ? `<span style="${S.algoBadge}background:${typeItem.accent};">${img(getIconUrl("algorithm", slot.key), slot.item.label, S.algoImg)}</span>`
+        : "";
+      return `<div style="${S.algoImageCell}">${inner}</div>`;
+    })
+    .join("");
+  const names = slots
+    .map((slot) => `<div style="${S.algoNameCell}">${slot ? esc(slot.item.label) : "-"}</div>`)
+    .join("");
+
+  // 옵션은 이 구역 후보에 있는 것만 (후보 밖 값은 표시하지 않음)
+  const mainOk = getAllowedOptions(type, "main").includes(zone.main) && getItem("attribute", zone.main);
+  const subs = zone.sub.filter((key) => getAllowedOptions(type, "sub").includes(key) && getItem("attribute", key));
+
+  return `
+<div class="pncwiki-algo-zone" style="${S.algoZone}">
+  <div style="${S.algoHead}">${esc(typeItem.label)}</div>
+  <div style="${S.algoRow}background:${typeItem.tint};">${images}</div>
+  <div style="${S.algoRow}">${names}</div>
+  <div style="${S.algoOptions}">
+    <div style="${S.algoOptionLabel}">주 옵션</div>
+    <div style="${S.algoOptionValue}">${mainOk ? optionChip(zone.main) : "-"}</div>
+    <div style="${S.algoOptionLabel}">부 옵션</div>
+    <div style="${S.algoOptionValue}">${subs.length ? subs.map(optionChip).join("") : "-"}</div>
+  </div>
+</div>`;
+}
+
+function renderAlgorithm(state) {
+  return `<div class="pncwiki-algorithm">${ALGORITHM_ZONES.map((type) => renderAlgorithmZone(type, state.algorithm[type])).join("")}</div>`;
+}
+
+/* ---------- 친밀도 ---------- */
+
+// order: 왼쪽 칸에 들어갈 표시 (숫자 또는 "서<br>약")
+function renderIntimacySkill(key, order) {
+  const item = getItem("intimacy", key);
+  if (!item) return ""; // 없는 키는 건너뜀
+
+  const base = GAME_DATA.intimacyBase ? assetUrl(GAME_DATA.intimacyBase) : "";
+  const icon = getIconUrl("intimacy", key);
+  const levels = item.values
+    .map(
+      (value, i) =>
+        `<div><span style="${S.lvBadge}">Lv${i + 1}</span>${esc(item.stat)} <span style="${S.lvValue}">${esc(value)}${esc(item.unit)}</span> 상승.</div>`
+    )
+    .join("");
+
+  return `
+  <div style="${S.intimacyRow}">
+    <div style="${S.intimacyCell}">${order}</div>
+    <div style="${S.intimacyCell}flex-direction:column;">
+      <div style="${S.intimacyIcon}">${base ? img(base, "", S.intimacyIconImg) : ""}${icon ? img(icon, item.label, S.intimacyIconImg) : ""}</div>
+      <div style="${S.intimacyName}">${esc(item.label)}</div>
+    </div>
+    <div style="${S.intimacyLevels}">${levels}</div>
+  </div>`;
+}
+
+function renderGiftCard(key) {
+  const gift = getItem("gift", key);
+  if (!gift) return "";
+  const tier = getItem("giftTier", gift.tier);
+  const color = tier ? tier.color : C.infoLine;
+  return `<div style="${S.giftCard}"><div style="${S.giftBox}border-color:${color};">${img(getIconUrl("gift", key), gift.label, S.giftImg)}</div><div style="${S.giftName}">${esc(gift.label)}</div></div>`;
+}
+
+function renderGiftGroup(reaction, title, keys) {
+  const icon = getIconUrl("giftReaction", reaction);
+  // GAME_DATA 순서(등급순)로 표시. 저장 순서와 무관
+  const cards = Object.keys(GAME_DATA.gift)
+    .filter((key) => keys.includes(key))
+    .map(renderGiftCard)
+    .join("");
+  return `
+  <div style="${S.intimacyHead}">${icon ? img(icon, getLabel("giftReaction", reaction), S.reactionIcon) : ""}<span>${title}</span></div>
+  ${cards ? `<div style="${S.giftList}">${cards}</div>` : `<div style="${S.empty}">-</div>`}`;
+}
+
+function renderIntimacy(state) {
+  // 맨 위: 서약 스킬 고정 / 그 아래: 고른 스킬 1·2·3 (빈 칸·없는 키는 건너뛰고 번호를 다시 매김)
+  const oathRows = Object.entries(GAME_DATA.intimacy)
+    .filter(([, item]) => item.oath)
+    .map(([key]) => renderIntimacySkill(key, "서<br>약"))
+    .join("");
+  const skillRows = state.intimacy.skills
+    .filter((key) => {
+      const item = getItem("intimacy", key);
+      return item && !item.oath;
+    })
+    .map((key, i) => renderIntimacySkill(key, i + 1))
+    .join("");
+  const gifts = state.intimacy.gifts;
+
+  return `
+<div class="pncwiki-intimacy" style="${S.intimacy}">
+  <div style="${S.intimacyHead}">친밀도 스킬</div>
+  ${oathRows}${skillRows}
+  ${renderGiftGroup("like", "좋아하는 선물", gifts.like)}
+  ${renderGiftGroup("hate", "싫어하는 선물", gifts.hate)}
+</div>`;
+}
 
 function renderSection(state, section) {
   const body = SECTION_BODY[section.key] ? SECTION_BODY[section.key](state) : "";
