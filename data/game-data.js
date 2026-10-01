@@ -119,11 +119,41 @@ const GAME_DATA = {
     "model-kit": { label: "프라모델", tier: 3, icon: "gift/model-kit.png" },
     "antique-sword": { label: "소장용 명검", tier: 3, icon: "gift/antique-sword.png" },
   },
-  // 추천 알고리즘. type: offense(공격성) / stability(안정성) / special(특이성)
+  // 추천 알고리즘 구역. tint = 이미지 줄 배경, accent = 알고리즘 아이콘 칸 배경
+  // (색 출처: 나무위키 「템플릿:뉴럴 클라우드 인형」 추천 알고리즘 표)
   algorithmType: {
-    offense: { label: "공격성" },
-    stability: { label: "안정성" },
-    special: { label: "특이성" },
+    offense: { label: "공격성", tint: "#e5b8b8", accent: "#bf3937" },
+    stability: { label: "안정성", tint: "#b8cce5", accent: "#3e7ac2" },
+    special: { label: "특이성", tint: "#b8e5c2", accent: "#48b961" },
+  },
+
+  // 구역별로 고를 수 있는 옵션 종류 (attribute 키). 수치는 다루지 않음.
+  // main = 주 옵션 후보, sub = 부 옵션 후보 (사용자 제공 「주요 수치」「부가 수치」 표 기준)
+  algorithmOptionRules: {
+    offense: {
+      main: ["atk", "hashrate", "physical-penetration", "operand-penetration"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "post-battle-hp", "debuff-resistance", "damage-boost",
+      ],
+    },
+    stability: {
+      main: ["max-hp", "physical-def", "operand-def", "post-battle-hp"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "post-battle-hp", "debuff-resistance", "injury-mitigation",
+      ],
+    },
+    special: {
+      main: ["physical-def", "operand-def", "crit-rate", "crit-damage", "healing-effect", "skill-haste"],
+      sub: [
+        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
+        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
+        "dodge-rate", "post-battle-hp", "debuff-resistance", "healing-effect", "skill-haste",
+      ],
+    },
   },
 
   algorithm: {
@@ -220,6 +250,17 @@ function getFullLabel(category, key) {
 function getIconUrl(category, key) {
   const item = getItem(category, key);
   return item && item.icon ? assetUrl(item.icon) : "";
+}
+
+// 구역(type)에 고를 수 있는 알고리즘 키 목록
+function getAlgorithmsOfType(type) {
+  return Object.keys(GAME_DATA.algorithm).filter((key) => GAME_DATA.algorithm[key].type === type);
+}
+
+// 구역의 주/부 옵션 후보 (kind = "main" | "sub")
+function getAllowedOptions(type, kind) {
+  const rule = GAME_DATA.algorithmOptionRules[type];
+  return rule && Array.isArray(rule[kind]) ? rule[kind] : [];
 }
 
 // 친밀도 스킬 효과 문장. 예: getIntimacyText("output-enhancement", 5) → "공격력 55 상승."
