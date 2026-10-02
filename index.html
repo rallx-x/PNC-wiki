@@ -264,6 +264,79 @@
                     <div id="giftPicker"></div>
                 </div>
 
+                <div class="form-group">
+                    <label>서약</label>
+                    <div class="list-field-row">
+                        <label class="list-field">칭호 수식어<input type="text" data-field="intimacy.oath.titlePrefix" placeholder="예) 고고한" /></label>
+                        <label class="list-field">칭호 단어<input type="text" data-field="intimacy.oath.titleSuffix" placeholder="예) 진귀품" /></label>
+                    </div>
+                    <div class="list-hint" id="oathPreview"></div>
+                    <label class="list-field">서약 설명<input type="text" data-field="intimacy.oath.description" /></label>
+                </div>
+
+                <div class="form-section-title">스토리</div>
+
+                <div class="form-group">
+                    <div class="story-tools">
+                        <span>칸 이름·개방 친밀도는 자동으로 들어가요</span>
+                        <span>
+                            <button type="button" class="list-btn" id="storyOpenAll" data-fold-all="story" data-fold-open="1">모두 펼치기</button>
+                            <button type="button" class="list-btn" id="storyCloseAll" data-fold-all="story" data-fold-open="0">모두 접기</button>
+                        </span>
+                    </div>
+                    <!-- 칸 10개는 script.js가 GAME_DATA.storySlots로 자동 생성 -->
+                    <div id="storyEditor"></div>
+                </div>
+
+                <div class="form-section-title">작중 행적</div>
+
+                <div class="form-group">
+                    <!-- 항목 카드는 script.js 목록형 입력(defineList "history.items")이 그림 -->
+                    <div data-list-editor="history.items"></div>
+                </div>
+
+                <div class="form-section-title">스킨</div>
+
+                <div class="form-group">
+                    <div class="list-guide">
+                        <b>적용범위</b> 3D모델 SD 변경 · Live2D 추가 · Animated 움직이는 일러스트 · Cut-in 궁극기 컷씬 변경 · 보이스 세트 추가
+                        <span>투영 종류는 기본 투영 · 확장 투영 · 완벽 투영 · 스킨 테마 중에서 고르거나 직접 적어도 돼요.</span>
+                    </div>
+                    <datalist id="skinTypeOptions">
+                        <option value="기본 투영"></option>
+                        <option value="확장 투영"></option>
+                        <option value="완벽 투영"></option>
+                        <option value="스킨 테마"></option>
+                    </datalist>
+                    <!-- 항목 카드는 script.js 목록형 입력(defineList "skin.items")이 그림 -->
+                    <div data-list-editor="skin.items"></div>
+                </div>
+
+                <div class="form-section-title">인형 관계</div>
+
+                <div class="form-group">
+                    <div class="list-guide">
+                        <b>관계명 예시</b> 절친 · 친구 · 앙숙 · 직장동료 · 중요 협력자
+                        <span>예시일 뿐이에요. 관계명·인물명 모두 자유롭게 적어 주세요.</span>
+                    </div>
+                    <!-- 항목 카드는 script.js 목록형 입력(defineList "relationship.items")이 그림 -->
+                    <div data-list-editor="relationship.items"></div>
+                </div>
+
+                <div class="form-section-title">대사</div>
+
+                <div class="form-group">
+                    <div class="story-tools">
+                        <span>칸 이름·코드는 자동으로 들어가요</span>
+                        <span>
+                            <button type="button" class="list-btn" data-fold-all="voice" data-fold-open="1">모두 펼치기</button>
+                            <button type="button" class="list-btn" data-fold-all="voice" data-fold-open="0">모두 접기</button>
+                        </span>
+                    </div>
+                    <!-- 칸 21개는 script.js가 GAME_DATA.voiceSlots로 자동 생성 -->
+                    <div id="voiceEditor"></div>
+                </div>
+
                 <div class="form-section-title">문단 설정</div>
 
                 <div class="form-group">
@@ -304,7 +377,7 @@
                         </label>
 
                         <label>
-                            <input type="checkbox" data-field="sections.appearance" />
+                            <input type="checkbox" data-section="history" checked disabled />
                             작중 행적
                         </label>
 

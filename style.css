@@ -512,3 +512,312 @@ body {
     position: static;
   }
 }
+
+/* 목록형 입력 (스토리·대사·인형 관계·스킨 등 공통) */
+.list-card {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfbfc;
+}
+
+.list-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  background: #eef0f4;
+}
+
+.list-card-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.list-card-tools {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.list-card-body {
+  padding: 12px;
+}
+
+.list-btn {
+  min-width: 32px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.list-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.list-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.list-btn.danger:hover:not(:disabled) {
+  border-color: #d14343;
+  color: #d14343;
+}
+
+.list-btn.list-add {
+  width: 100%;
+  padding: 10px;
+  border-style: dashed;
+  font-size: 13px;
+}
+
+.list-empty {
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--sub-text);
+  font-size: 13px;
+  text-align: center;
+}
+
+.form-group .list-field {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub-text);
+}
+
+.form-group .list-field:last-child {
+  margin-bottom: 0;
+}
+
+.form-group .list-field input,
+.form-group .list-field textarea,
+.form-group .list-field select {
+  margin-top: 4px;
+}
+
+.form-group .list-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.form-group .list-field-row .list-field {
+  margin-bottom: 0;
+}
+
+.list-hint {
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sub-text);
+}
+
+.list-hint.is-warn {
+  color: #c2410c;
+}
+
+.list-hint.is-ok {
+  color: #15803d;
+}
+
+/* 스토리: 칸마다 접기/펼치기 */
+.story-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--sub-text);
+}
+
+.story-slot {
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfbfc;
+}
+
+.story-slot summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.story-slot summary::-webkit-details-marker {
+  display: none;
+}
+
+.story-slot summary::before {
+  content: "▶";
+  margin-right: 6px;
+  font-size: 10px;
+  color: var(--sub-text);
+}
+
+.story-slot[open] summary::before {
+  content: "▼";
+}
+
+.story-slot-name {
+  flex: 1;
+}
+
+.story-slot-status {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sub-text);
+}
+
+.story-slot-status.is-written {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.story-slot-body {
+  padding: 0 12px 12px;
+}
+
+.story-slot-unlock {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--sub-text);
+}
+
+.list-hint[hidden] {
+  display: none;
+}
+
+/* 목록 위 안내 (예: 인형 관계 관계명 예시) — 선택지가 아니라 참고 글 */
+.list-guide {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f0f2f5;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.list-guide b {
+  margin-right: 6px;
+}
+
+.list-guide span {
+  display: block;
+  font-size: 12px;
+  color: var(--sub-text);
+}
+
+/* 대사 칸 코드 (MORNING 등) */
+.story-slot-unlock.is-code {
+  font-family: Consolas, "Courier New", monospace;
+  letter-spacing: 0.5px;
+}
+
+
+.story-tools > span:last-child {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+/* 접는 목록 카드 (스킨) */
+details.list-card > summary.list-card-head {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.list-card > summary.list-card-head::-webkit-details-marker {
+  display: none;
+}
+
+details.list-card > summary .list-card-title::before {
+  content: "▶ ";
+  font-size: 10px;
+  color: var(--sub-text);
+}
+
+details.list-card[open] > summary .list-card-title::before {
+  content: "▼ ";
+}
+
+details.list-card:not([open]) > summary.list-card-head {
+  border-bottom: none;
+  border-radius: 10px;
+}
+
+/* 스킨 적용범위 복수 선택 */
+.skin-effect-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.form-group .skin-effect-choice {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.form-group .skin-effect-choice input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.skin-effect-choice:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.skin-effect-badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.skin-effect-choice small {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--sub-text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.form-group .list-field textarea[rows="2"] {
+  min-height: 0;
+}
+

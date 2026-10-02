@@ -27,19 +27,34 @@ const SECTION_DEFS = [
   { key: "algorithm", title: "추천 알고리즘", fixed: true },
   { key: "intimacy", title: "친밀도", fixed: true },
   { key: "story", title: "스토리" },
-  { key: "appearance", title: "작중 행적" },
+  { key: "history", title: "작중 행적", fixed: true }, // 필수 문단 (항목 0개여도 표시)
   { key: "skin", title: "스킨", fixed: true },
   { key: "relationship", title: "인형 관계", fixed: true },
   { key: "voice", title: "대사", fixed: true },
   { key: "etc", title: "기타", fixed: true },
 ];
 
+// 하위 문단이 있는 문단: key → (state) => 하위 문단 제목 목록 (문서에 나올 것만, 순서대로)
+const SECTION_SUBS = {
+  history: (state) => getHistoryItems(state).map((item) => item.title.trim()),
+  skin: (state) => getSkinItems(state).map((item) => item.heading),
+};
+
 // 켜진 문단만 골라 번호를 붙여 돌려준다. 목차와 본문이 같은 결과를 쓴다.
+// 하위 문단 번호도 여기서 계산 ("7.1", "7.2" — 상위 번호를 따라감, 저장하지 않음)
 function getActiveSections(state) {
   let number = 0;
   return SECTION_DEFS.filter(
     (def) => def.fixed || state.sections[def.key] !== false
-  ).map((def) => ({ ...def, number: (number += 1) }));
+  ).map((def) => {
+    const sectionNumber = (number += 1);
+    const subs = (SECTION_SUBS[def.key] ? SECTION_SUBS[def.key](state) : []).map((title, i) => ({
+      number: `${sectionNumber}.${i + 1}`,
+      anchor: `${sectionAnchor(def.key)}-${i + 1}`,
+      title,
+    }));
+    return { ...def, number: sectionNumber, subs };
+  });
 }
 
 // 문단 앵커 id. 티스토리 페이지의 다른 id와 겹치지 않게 접두사를 붙임.
@@ -71,6 +86,12 @@ const C = {
   lvValue: "#ffa500", // 친밀도 수치 강조
   infoLine: "#cccccc",
   white: "#ffffff",
+  link: "#0275d8", // 나무위키 링크색
+  oathHead: "#6b4c2a", // 서약 머리줄 (갈색)
+  oathLine: "#8a6a40", // 서약 테두리
+  oathRule: "#d9c3a0", // 서약 칭호·설명 사이 선
+  skinLabel: "#000000", // 스킨 정보 표 제목칸
+  storyHead: "#2e2e2e", // 인형 스토리 카드 머리줄
 };
 
 const FONT = "'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif";
@@ -159,7 +180,60 @@ const S = {
   heading: `margin:0 0 20px;padding:0 0 8px;border-bottom:1px solid ${C.rule};color:${C.text};font-size:28px;font-weight:700;line-height:1.3;`,
   headingArrow: `display:inline-block;width:28px;color:${C.subText};font-size:16px;vertical-align:top;padding-top:4px;`,
   headingNumber: `color:${C.orange};`,
-  paragraph: `margin:0;line-height:1.8;`,
+  paragraph: `margin:0;line-height:1.8;overflow-wrap:anywhere;`,
+  subSection: `margin:0 0 28px;`,
+  subHeading: `margin:0 0 14px;padding:0 0 6px;border-bottom:1px solid ${C.rule};color:${C.text};font-size:22px;font-weight:700;line-height:1.3;`,
+  subHeadingArrow: `display:inline-block;width:24px;color:${C.subText};font-size:14px;vertical-align:top;padding-top:3px;`,
+  linkNote: `margin:0 0 12px;padding:0;color:${C.text};font-size:15px;line-height:1.7;`,
+  link: `color:${C.link};text-decoration:none;`,
+  tocSubItem: `margin:4px 0 4px 18px;line-height:1.4;`,
+
+  // 스토리 카드: 칸마다 접기(details). 기본은 접힘, 캡처 때만 전부 펼침
+  story: `box-sizing:border-box;max-width:720px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};`,
+  storyHead: `padding:8px;background:${C.storyHead};color:${C.white};font-weight:700;text-align:center;`,
+  storySlot: `display:block;margin:0;border-top:1px solid ${C.infoLine};`,
+  storySummary: `display:block;padding:7px 10px;background:${C.tableHead};color:${C.infoText};font-weight:700;text-align:center;cursor:pointer;list-style:none;`,
+  storyBody: `padding:12px 16px 14px;line-height:1.8;`,
+  storyUnlock: `margin:0 0 8px;color:${C.subText};font-size:13px;`,
+  storyText: `margin:0;overflow-wrap:anywhere;`,
+
+  // 인형 관계: "• 관계명 - 인물명" 줄 목록 (인물명만 강조색, 링크 아님)
+  relationList: `margin:0;line-height:1.9;`,
+  relationItem: `display:flex;gap:8px;overflow-wrap:anywhere;`,
+  relationBullet: `flex-shrink:0;color:${C.subText};`,
+  relationPerson: `color:${C.orange};`,
+  relationName: `font-weight:700;`,
+
+  // 친밀도 서약 (나무위키 서약 칸 참고: 갈색 머리줄 + 칭호 줄 + 구분선 + 설명)
+  oath: `box-sizing:border-box;max-width:600px;margin:16px 0 0;border:2px solid ${C.oathLine};background:${C.white};color:${C.infoText};`,
+  oathHead: `padding:6px;background:${C.oathHead};color:${C.white};font-weight:700;text-align:center;`,
+  oathTitle: `display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 22px;padding:10px 12px 8px;font-weight:700;text-align:center;`,
+  oathPart: `display:inline-flex;align-items:center;gap:6px;`,
+  oathIcon: `display:block;width:36px;height:auto;margin:0;border:0;`,
+  oathRule: `height:0;margin:0 24px;border-top:2px solid ${C.oathRule};`,
+  oathDesc: `padding:8px 12px 12px;font-size:14px;text-align:center;overflow-wrap:anywhere;`,
+
+  // 스킨 (하위 문단마다 접기. 큰 이미지 + 정보 표 + 기본 설명)
+  skinFold: `display:block;margin:0 0 20px;`,
+  skinSummary: `display:block;cursor:pointer;list-style:none;`,
+  skinImageBox: `box-sizing:border-box;max-width:720px;margin:0 0 -1px;border:1px solid ${C.cardBorder};background:${C.soft};text-align:center;`,
+  skinImage: `display:block;width:100%;height:auto;margin:0 auto;border:0;`,
+  skinTable: `box-sizing:border-box;display:grid;grid-template-columns:35% 1fr;gap:1px;max-width:720px;border:1px solid ${C.cardBorder};background:${C.infoLine};`,
+  skinLabel: `display:flex;align-items:center;justify-content:center;padding:6px 8px;background:${C.skinLabel};color:${C.white};font-size:14px;font-weight:700;text-align:center;`,
+  skinValue: `display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;padding:6px 10px;background:${C.white};color:${C.infoText};font-size:14px;line-height:1.6;text-align:center;overflow-wrap:anywhere;`,
+  skinBadge: `display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.6;`,
+  skinDesc: `box-sizing:border-box;display:inline-block;max-width:720px;margin:16px 0 0;padding:10px 16px;border:1px dashed ${C.subText};border-left:5px solid ${C.subText};background:${C.soft};font-size:14px;`,
+  skinDescHead: `margin:0 0 6px;padding:0 0 6px;border-bottom:1px solid ${C.infoLine};`,
+  skinDescText: `overflow-wrap:anywhere;`,
+
+  // 대사(기본 보이스): 일반 표 (접기 없음). 왼쪽 칸 이름+코드, 오른쪽 대사
+  voice: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:720px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
+  voiceHead: `padding:8px;background:${C.storyHead};color:${C.white};font-weight:700;text-align:center;`,
+  voiceRow: `display:grid;grid-template-columns:150px 1fr;gap:1px;`,
+  voiceLabel: `display:flex;flex-direction:column;justify-content:center;padding:8px 10px;background:${C.tableHead};text-align:center;`,
+  voiceName: `font-size:14px;font-weight:700;line-height:1.4;`,
+  voiceCode: `margin:2px 0 0;color:${C.subText};font-size:11px;letter-spacing:0.5px;line-height:1.3;`,
+  voiceText: `display:flex;align-items:center;padding:8px 12px;background:${C.white};line-height:1.7;overflow-wrap:anywhere;`,
   accent: `color:${C.orange};font-weight:700;`,
 
   // 프로필 카드
@@ -193,6 +267,10 @@ function esc(text) {
 // escape 후 줄바꿈만 <br>로 (티스토리가 공백 처리를 바꿔도 줄바꿈 유지)
 function escMultiline(text) {
   return esc(text).replace(/\r?\n/g, "<br>");
+}
+
+function isObj(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function textOrDash(text) {
@@ -332,7 +410,13 @@ function renderToc(sections) {
   const items = sections
     .map(
       (s) =>
-        `<div style="${S.tocItem}"><a href="#${sectionAnchor(s.key)}" style="${S.tocLink}">${s.number}. ${esc(s.title)}</a></div>`
+        `<div style="${S.tocItem}"><a href="#${sectionAnchor(s.key)}" style="${S.tocLink}">${s.number}. ${esc(s.title)}</a></div>` +
+        s.subs
+          .map(
+            (sub) =>
+              `<div style="${S.tocSubItem}"><a href="#${sub.anchor}" style="${S.tocLink}">${sub.number}. ${esc(sub.title)}</a></div>`
+          )
+          .join("")
     )
     .join("");
 
@@ -388,7 +472,198 @@ const SECTION_BODY = {
   intimacy: (state) => renderIntimacy(state),
 
   algorithm: (state) => renderAlgorithm(state),
+
+  story: (state) => renderStory(state),
+
+  history: (state, section) => renderHistory(state, section),
+
+  skin: (state, section) => renderSkin(state, section),
+
+  relationship: (state) => renderRelationship(state),
+
+  voice: (state) => renderVoice(state),
 };
+
+/* ---------- 스킨 ---------- */
+
+// 문서에 나올 스킨만 = 투영 종류나 이름 중 하나라도 있는 항목. 순서대로 번호 (8.1 …)
+function getSkinItems(state) {
+  const items = isObj(state.skin) && Array.isArray(state.skin.items) ? state.skin.items : [];
+  const str = (v) => (typeof v === "string" ? v.trim() : "");
+  return items
+    .filter(isObj)
+    .map((item) => {
+      const type = str(item.type);
+      const name = str(item.name);
+      const effects = Array.isArray(item.effects) ? item.effects : [];
+      return {
+        type,
+        name,
+        heading: [type, name].filter(Boolean).join(" - "),
+        image: safeLinkUrl(item.image),
+        illustrator: str(item.illustrator),
+        acquisition: str(item.acquisition),
+        effects: Object.keys(GAME_DATA.skinEffect).filter((key) => effects.includes(key)),
+        description: str(item.description),
+      };
+    })
+    .filter((item) => item.heading);
+}
+
+function renderSkinBadge(key) {
+  const effect = GAME_DATA.skinEffect[key];
+  return `<span style="${S.skinBadge}background:${effect.color};color:${effect.text};">${esc(effect.label)}</span>`;
+}
+
+// 하위 문단마다 details (기본 접힘 — 스토리와 같음). 캡처는 getPreviewParts()가 전부 펼침
+function renderSkin(state, section) {
+  return getSkinItems(state)
+    .map((item, i) => {
+      const sub = section.subs[i];
+      const row = (label, value) => `<div style="${S.skinLabel}">${label}</div><div style="${S.skinValue}">${value || "-"}</div>`;
+      const image = item.image
+        ? `<div style="${S.skinImageBox}">${img(item.image, item.heading, S.skinImage)}</div>`
+        : "";
+      const desc = item.description
+        ? `<div style="${S.skinDesc}"><div style="${S.skinDescHead}">기본 설명</div><div style="${S.skinDescText}">${escMultiline(item.description)}</div></div>`
+        : "";
+      return `
+<details class="pncwiki-skin" id="${sub.anchor}" style="${S.skinFold}">
+  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(item.heading)}</summary>
+  ${image}<div style="${S.skinTable}">${row("일러스트레이터", esc(item.illustrator))}${row("입수방법", escMultiline(item.acquisition))}${row(
+        "적용범위",
+        item.effects.map(renderSkinBadge).join("")
+      )}</div>${desc}
+</details>`;
+    })
+    .join("");
+}
+
+/* ---------- 인형 관계 ---------- */
+
+// 문서에 나올 항목만 (관계명·인물명 둘 다 빈 항목은 빠짐)
+function getRelationshipItems(state) {
+  const items = isObj(state.relationship) && Array.isArray(state.relationship.items) ? state.relationship.items : [];
+  const str = (v) => (typeof v === "string" ? v.trim() : "");
+  return items
+    .filter(isObj)
+    .map((item) => ({ relation: str(item.relation), person: str(item.person) }))
+    .filter((item) => item.relation || item.person);
+}
+
+// "관계명 - 인물명" / 관계명만 / 인물명만 (구분자는 둘 다 있을 때만). 항목 0개면 문단 제목만.
+function renderRelationship(state) {
+  const items = getRelationshipItems(state);
+  if (!items.length) return "";
+  const lines = items
+    .map((item) => {
+      const person = item.person ? `<span style="${S.relationPerson}">${esc(item.person)}</span>` : "";
+      const relation = item.relation ? `<span style="${S.relationName}">${esc(item.relation)}${person ? " -" : ""}</span>` : "";
+      const text = [relation, person].filter(Boolean).join(" ");
+      return `<div style="${S.relationItem}"><span style="${S.relationBullet}">•</span><span>${text}</span></div>`;
+    })
+    .join("");
+  return `<div class="pncwiki-relationship" style="${S.relationList}">${lines}</div>`;
+}
+
+/* ---------- 대사 (기본 보이스) ---------- */
+// 고정 21칸 (GAME_DATA.voiceSlots 순서). 빈 칸도 줄은 남기고 "-".
+function renderVoice(state) {
+  const voice = isObj(state.voice) ? state.voice : {};
+  const rows = GAME_DATA.voiceSlots
+    .map((slot) => {
+      const text = typeof voice[slot.key] === "string" ? voice[slot.key].trim() : "";
+      return `
+  <div style="${S.voiceRow}">
+    <div style="${S.voiceLabel}"><div style="${S.voiceName}">${esc(slot.label)}</div><div style="${S.voiceCode}">${esc(slot.code)}</div></div>
+    <div style="${S.voiceText}"><div>${text ? escMultiline(text) : "-"}</div></div>
+  </div>`;
+    })
+    .join("");
+  return `
+<div class="pncwiki-voice" style="${S.voice}">
+  <div style="${S.voiceHead}">기본 보이스</div>${rows}
+</div>`;
+}
+
+/* ---------- 스토리 ---------- */
+// 고정 10칸 (GAME_DATA.storySlots 순서). 칸마다 details라 접으면 칸 제목만 남는다.
+// 기본은 접힘 (칸 제목만 보임). 이미지 캡처는 script.js getPreviewParts()가 전부 펼친 뒤 찍음.
+function renderStory(state) {
+  const story = isObj(state.story) ? state.story : {};
+  const slots = GAME_DATA.storySlots
+    .map((slot) => {
+      const text = typeof story[slot.key] === "string" ? story[slot.key].trim() : "";
+      return `
+  <details class="pncwiki-story-slot" style="${S.storySlot}">
+    <summary style="${S.storySummary}">[ ${esc(slot.label)} ]</summary>
+    <div style="${S.storyBody}">
+      <div style="${S.storyUnlock}">${esc(getStoryUnlockText(slot))}</div>
+      <div style="${S.storyText}">${text ? escMultiline(text) : "-"}</div>
+    </div>
+  </details>`;
+    })
+    .join("");
+  return `
+<div class="pncwiki-story" style="${S.story}">
+  <div style="${S.storyHead}">인형 스토리</div>${slots}
+</div>`;
+}
+
+/* ---------- 작중 행적 ---------- */
+
+// 외부 링크 주소 검사: http:// · https:// 로 시작하는 올바른 주소만 허용 (javascript: 등 차단)
+// 통과하면 정리된 주소, 아니면 ""
+function safeLinkUrl(raw) {
+  const text = String(raw == null ? "" : raw).trim();
+  if (!/^https?:\/\//i.test(text) || /[\s"'<>`\\]/.test(text)) return "";
+  try {
+    const url = new URL(text);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    if (!/^[a-z0-9.-]+$/i.test(url.hostname) || !/[a-z0-9]/i.test(url.hostname)) return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+// 문서에 나올 항목만 = 제목이 있는 항목 (제목 없는 항목은 본문·목차·번호에서 모두 빠짐, 데이터는 그대로)
+// 번호는 이 목록 순서로 매김 → 빈틈없이 이어짐
+function getHistoryItems(state) {
+  const items = isObj(state.history) && Array.isArray(state.history.items) ? state.history.items : [];
+  const str = (v) => (typeof v === "string" ? v : "");
+  return items
+    .filter(isObj)
+    .map((item) => ({
+      title: str(item.title),
+      linkUrl: str(item.linkUrl),
+      linkText: str(item.linkText),
+      summary: str(item.summary),
+    }))
+    .filter((item) => item.title.trim());
+}
+
+// "→ 자세한 내용은 [대체 텍스트] 문서를 참고하십시오." — 주소·대체 텍스트 둘 다 있어야 출력
+function renderHistoryLink(item) {
+  const href = safeLinkUrl(item.linkUrl);
+  const text = item.linkText.trim();
+  if (!href || !text) return "";
+  return `<div style="${S.linkNote}">→ 자세한 내용은 <a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="${S.link}">${esc(text)}</a> 문서를 참고하십시오.</div>`;
+}
+
+function renderHistory(state, section) {
+  return getHistoryItems(state)
+    .map((item, i) => {
+      const sub = section.subs[i];
+      const summary = item.summary.trim();
+      return `
+<div class="pncwiki-subsection" id="${sub.anchor}" style="${S.subSection}">
+  <div class="pncwiki-subheading" style="${S.subHeading}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(item.title.trim())}</div>
+  ${renderHistoryLink(item)}${summary ? `<div style="${S.paragraph}">${escMultiline(summary)}</div>` : ""}
+</div>`;
+    })
+    .join("");
+}
 
 /* ---------- 추천 알고리즘 ---------- */
 
@@ -531,11 +806,59 @@ function renderIntimacy(state) {
   ${oathRows}${skillRows}
   ${renderGiftGroup("like", "좋아하는 선물", gifts.like)}
   ${renderGiftGroup("hate", "싫어하는 선물", gifts.hate)}
+</div>${renderOath(state)}`;
+}
+
+/* ---------- 친밀도 서약 ---------- */
+
+function getOath(state) {
+  const oath = isObj(state.intimacy) && isObj(state.intimacy.oath) ? state.intimacy.oath : {};
+  const str = (v) => (typeof v === "string" ? v.trim() : "");
+  const name = isObj(state.profile) ? str(state.profile.name) : "";
+  return { prefix: str(oath.titlePrefix), suffix: str(oath.titleSuffix), description: str(oath.description), name };
+}
+
+// 칭호 조립 규칙 (빈 칸 때문에 ·, 의, 이미지가 혼자 남지 않게)
+//  - 왼쪽 묶음 = [수식어 이미지] + 수식어 (+ " · 이름의" — 단어가 있을 때만, "의"가 단어에 걸리므로)
+//  - 수식어 없이 단어만 있으면 "이름의"는 단어 묶음 앞에 붙음 (수식어 이미지 없음)
+//  - 오른쪽 묶음 = [단어 이미지] + 단어 (단어 있을 때만)
+//  - 이름이 비어 있으면 "이름의"는 생략
+function getOathTitleParts(state) {
+  const { prefix, suffix, name } = getOath(state);
+  const owner = suffix && name ? `${name}의` : "";
+  return {
+    left: prefix ? [prefix, owner].filter(Boolean).join(" · ") : "",
+    owner: !prefix ? owner : "",
+    right: suffix,
+  };
+}
+
+// 글자만 (입력 화면 미리보기용)
+function getOathTitleText(state) {
+  const p = getOathTitleParts(state);
+  return [p.left, [p.owner, p.right].filter(Boolean).join(" ")].filter(Boolean).join("  ");
+}
+
+function renderOath(state) {
+  const { description } = getOath(state);
+  const parts = getOathTitleParts(state);
+  const icon = (key) => img(assetUrl(GAME_DATA.oathTitle[key]), "", S.oathIcon);
+  const left = parts.left ? `<span style="${S.oathPart}">${icon("prefix")}<span>${esc(parts.left)}</span></span>` : "";
+  const right = parts.right
+    ? `<span style="${S.oathPart}">${parts.owner ? `<span>${esc(parts.owner)}</span>` : ""}${icon("suffix")}<span>${esc(parts.right)}</span></span>`
+    : "";
+  const title = left || right ? `<div style="${S.oathTitle}">${left}${right}</div>` : "";
+  const desc = description ? `<div style="${S.oathDesc}">${esc(description)}</div>` : "";
+  const body = title || desc ? `${title}${title && desc ? `<div style="${S.oathRule}"></div>` : ""}${desc}` : `<div style="${S.oathDesc}padding-top:10px;">-</div>`;
+  return `
+<div class="pncwiki-oath" style="${S.oath}">
+  <div style="${S.oathHead}">서약</div>
+  ${body}
 </div>`;
 }
 
 function renderSection(state, section) {
-  const body = SECTION_BODY[section.key] ? SECTION_BODY[section.key](state) : "";
+  const body = SECTION_BODY[section.key] ? SECTION_BODY[section.key](state, section) : "";
   return part(
     section.key,
     `<div class="pncwiki-section" id="${sectionAnchor(section.key)}" style="${S.section}">${renderHeading(section)}${body}</div>`

@@ -83,16 +83,40 @@ const DEFAULT_STATE = {
       hate: [], // GAME_DATA.gift 키 목록 (싫어하는 선물)
       // 보통 = 둘 다 아닌 나머지 전부 (따로 저장하지 않음)
     },
+    // 서약 칭호·설명. 칭호 가운데 "{이름}의"는 profile.name에서 자동 (저장 안 함)
+    oath: {
+      titlePrefix: "", // 칭호 수식어
+      titleSuffix: "", // 칭호 단어
+      description: "", // 서약 설명 (한 줄)
+    },
   },
-  // 켜고 끌 수 있는 문단만. (고정 문단은 SECTION_DEFS의 fixed)
+  // 스토리: 고정 10칸의 본문만 (칸 이름·순서·개방 Lv은 GAME_DATA.storySlots)
+  story: Object.fromEntries(GAME_DATA.storySlots.map((slot) => [slot.key, ""])),
+  // 작중 행적: 하위 문단 목록. 번호(7.1 …)는 renderer가 계산, 저장하지 않음
+  history: {
+    items: [], // { title, linkUrl, linkText, summary }
+  },
+  // 스킨: 자유 목록. 번호(8.1 …)는 renderer가 계산, 적용범위는 GAME_DATA.skinEffect 키 배열
+  skin: {
+    items: [], // { type, name, image, illustrator, acquisition, effects: [], description }
+  },
+  // 인형 관계: 자유 목록 (관계명·인물명 모두 직접 입력. 예시는 입력 화면 안내일 뿐)
+  relationship: {
+    items: [], // { relation, person }
+  },
+  // 대사(기본 보이스): 고정 21칸의 대사만 (칸 이름·코드·순서는 GAME_DATA.voiceSlots)
+  voice: Object.fromEntries(GAME_DATA.voiceSlots.map((slot) => [slot.key, ""])),
+  // 켜고 끌 수 있는 문단만. (고정 문단은 SECTION_DEFS의 fixed — 작중 행적은 필수 문단)
   sections: {
     weapon: true,
     story: true,
-    appearance: true,
   },
 };
 
 // 문단 순서·제목(SECTION_DEFS)과 문서 그리기는 renderer.js에 있음.
+
+// 목록형 입력 등록부 (5-1 참고). 경로 → 목록 정의
+const LIST_DEFS = {};
 
 const MAX_POSITIONS = 2; // 포지션 최대 선택 수
 const INTIMACY_SLOTS = 3; // 선택 친밀도 스킬 칸 수 (서약 스킬 제외)
@@ -103,6 +127,11 @@ let state = cloneDefaults();
 
 function cloneDefaults() {
   return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+// 빈 새 문서 (고정 칸 목록은 칸 수만큼 채운 상태)
+function freshState() {
+  return normalizeState(cloneDefaults());
 }
 
 function isPlainObject(value) {
@@ -358,6 +387,11 @@ function normalizeState(st) {
   const like = unique(st.intimacy.gifts.like);
   st.intimacy.gifts.like = like;
   st.intimacy.gifts.hate = unique(st.intimacy.gifts.hate).filter((key) => !like.includes(key));
+
+  // 목록형 입력: 등록된 목록마다 항목 모양 정리
+  Object.keys(LIST_DEFS).forEach((path) => {
+    setPath(st, path, normalizeListValue(getPath(st, path), LIST_DEFS[path]));
+  });
   return st;
 }
 
@@ -382,7 +416,7 @@ function loadFromLocalStorage() {
     state = normalizeData(JSON.parse(saved));
   } catch {
     // 망가진 자동저장은 무시하고 빈 상태로 시작
-    state = cloneDefaults();
+    state = freshState();
   }
 }
 
@@ -787,10 +821,14 @@ function fillGiftPicker() {
 }
 
 // state → 폼 (불러오기·초기화·새로고침 때)
-function fillForm() {
-  buildBirthdayDayOptions();
-
-  document.querySelectorAll("[data-field]").forEach((el) => {
+// root 안의 data-field 입력칸에 state 값 넣기
+function fillFields(root) {
+  // 키 배열 체크박스 (data-toggle-field="경로" value="키")
+  root.querySelectorAll("[data-toggle-field]").forEach((el) => {
+    const list = getPath(state, el.dataset.toggleField);
+    el.checked = Array.isArray(list) && list.includes(el.value);
+  });
+  root.querySelectorAll("[data-field]").forEach((el) => {
     const value = getPath(state, el.dataset.field);
 
     if (el.type === "checkbox") {
@@ -801,6 +839,11 @@ function fillForm() {
       el.value = value == null ? "" : value;
     }
   });
+}
+
+function fillForm() {
+  buildBirthdayDayOptions();
+  fillFields(document);
 
   const unknown = state.profile.birthday.unknown;
   birthdayMonthSelect.disabled = unknown;
@@ -809,6 +852,8 @@ function fillForm() {
   fillGiftPicker();
   fillPositionPicker();
   fillAlgorithmPicker();
+  Object.keys(FOLD_EDITORS).forEach(fillFoldStatus);
+  fillOathPreview();
 }
 
 // 폼 → state (입력할 때마다)
@@ -832,6 +877,25 @@ function handleInput(event) {
     if (!el.checked) return;
     setGiftReaction(el.dataset.gift, el.value);
     fillGiftPicker();
+    saveToLocalStorage();
+    render();
+    return;
+  }
+
+  // 키 배열 체크박스 (복수 선택): 켜면 추가, 끄면 빼기. 순서는 각 목록 clean이 정리
+  if (el.dataset && el.dataset.toggleField) {
+    const togglePath = el.dataset.toggleField;
+    const current = getPath(state, togglePath);
+    const list = (Array.isArray(current) ? current : []).filter((key) => key !== el.value);
+    if (el.checked) list.push(el.value);
+    const listPath = Object.keys(LIST_DEFS).find((p) => togglePath.startsWith(`${p}.`));
+    setPath(state, togglePath, list);
+    if (listPath && LIST_DEFS[listPath].clean) {
+      const index = Number(togglePath.slice(listPath.length + 1).split(".")[0]);
+      const items = getList(listPath);
+      items[index] = LIST_DEFS[listPath].clean(items[index]);
+    }
+    updateListTitle(togglePath);
     saveToLocalStorage();
     render();
     return;
@@ -868,6 +932,11 @@ function handleInput(event) {
     fillAlgorithmPicker(); // 아이콘 미리보기·중복 막기 갱신
   }
 
+  updateListTitle(path); // 목록 카드 머리 글자·안내 갱신 (목록 칸일 때만)
+  if (path.startsWith("intimacy.oath.") || path === "profile.name") fillOathPreview();
+  const foldPrefix = path.split(".")[0];
+  if (FOLD_EDITORS[foldPrefix]) fillFoldStatus(foldPrefix);
+
   if (path.startsWith("profile.birthday")) {
     applyBirthdayRules();
     fillForm(); // 일 선택지·비활성 상태 갱신
@@ -876,6 +945,503 @@ function handleInput(event) {
   saveToLocalStorage();
   render();
 }
+
+/* ---------- 5-1. 목록형 입력 공통 ---------- */
+// 스토리·대사·인형 관계·스킨처럼 같은 모양 항목이 여러 개인 입력의 공통 동작.
+// 문단마다 하는 일: (1) DEFAULT_STATE에 빈 배열 자리 만들기
+//                  (2) defineList(경로, 정의)  (3) index.html에 <div data-list-editor="경로">
+// 공통이 하는 일: 카드 그리기 · 추가 · 삭제 · ↑↓ 이동 · 불러온 값 정리.
+// 항목 칸은 평범한 data-field("경로.번호.필드")라서 입력 처리는 기존 handleInput 그대로.
+// 항목의 의미와 문서 모양은 각 문단(정의의 fields, renderer의 SECTION_BODY)이 맡는다.
+//
+// 정의 (def):
+//   item   : 새 항목 기본값이자 항목 모양. 예) { title: "", content: "" }
+//            불러올 때 이 모양에 맞춰 정리 (없는 필드 채움, 모르는 필드·종류 다른 값 버림)
+//   fixed  : 숫자면 칸 수 고정 (추가·삭제·이동 버튼 없음). 없으면 가변 목록
+//   max    : 가변 목록 최대 개수 (없으면 제한 없음)
+//   label  : 카드 머리 기본 이름. 예) "스킨" → "스킨 1"
+//   title  : (item, index) => 카드 머리에 덧붙일 글자 (선택)
+//   fields : (base, item, index) => 입력칸 요소 배열. base = "경로.번호"
+//   addLabel : 추가 버튼 글자 (선택)
+//   clean  : (item) => item — 불러올 때 항목 모양 정리 뒤 추가로 다듬기 (선택. 예: 키 배열 거르기)
+//   fold   : true면 카드를 접고 펼 수 있음 (펼침 상태는 화면 전용, 저장 안 함)
+//   sync   : (base, item) => void — 카드를 그린 뒤·항목 칸을 고칠 때마다 호출 (안내 문구 갱신 등, 선택)
+
+function defineList(path, def) {
+  LIST_DEFS[path] = { label: "항목", ...def };
+}
+
+function newListItem(def) {
+  return JSON.parse(JSON.stringify(def.item));
+}
+
+// 불러온 값 → 목록 정의에 맞는 배열
+//  - 배열이 아니면 빈 목록 / 항목이 객체가 아니면 가변 목록은 버리고, 고정 칸은 빈 칸으로
+//  - 항목 안은 def.item 모양으로 정리 (mergeWithDefaults)
+function normalizeListValue(raw, def) {
+  const list = Array.isArray(raw) ? raw : [];
+  if (def.fixed) {
+    const out = [];
+    for (let i = 0; i < def.fixed; i += 1) {
+      out.push(isPlainObject(list[i]) ? (def.clean || ((x) => x))(mergeWithDefaults(def.item, list[i])) : newListItem(def));
+    }
+    return out;
+  }
+  const clean = def.clean || ((item) => item);
+  const out = list.filter(isPlainObject).map((item) => clean(mergeWithDefaults(def.item, item)));
+  return def.max ? out.slice(0, def.max) : out;
+}
+
+function getList(path) {
+  const list = getPath(state, path);
+  return Array.isArray(list) ? list : [];
+}
+
+function isBlankItem(item, def) {
+  return JSON.stringify(item) === JSON.stringify(newListItem(def));
+}
+
+function listAdd(path) {
+  const def = LIST_DEFS[path];
+  const list = getList(path);
+  if (!def || def.fixed || (def.max && list.length >= def.max)) return false;
+  setPath(state, path, [...list, newListItem(def)]);
+  return true;
+}
+
+function listRemove(path, index) {
+  const def = LIST_DEFS[path];
+  const list = getList(path);
+  if (!def || def.fixed || index < 0 || index >= list.length) return false;
+  setPath(state, path, list.filter((_, i) => i !== index));
+  return true;
+}
+
+// dir: -1 = 위로, 1 = 아래로. 첫 항목 위·마지막 항목 아래는 아무 일 없음
+function listMove(path, index, dir) {
+  const def = LIST_DEFS[path];
+  const list = getList(path).slice();
+  const to = index + dir;
+  if (!def || def.fixed || index < 0 || index >= list.length || to < 0 || to >= list.length) return false;
+  [list[index], list[to]] = [list[to], list[index]];
+  setPath(state, path, list);
+  return true;
+}
+
+function listCardTitle(def, item, index) {
+  const extra = def.title ? def.title(item, index) : "";
+  return extra ? `${def.label} ${index + 1} · ${extra}` : `${def.label} ${index + 1}`;
+}
+
+function makeListButton(text, action, path, index, title) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "list-btn";
+  button.textContent = text;
+  button.title = title;
+  button.dataset.listAction = action;
+  button.dataset.listPath = path;
+  if (index !== undefined) button.dataset.listIndex = String(index);
+  return button;
+}
+
+// 목록 하나 다시 그리기 (state 기준). 버튼에는 리스너를 달지 않음 → editorPanel 클릭 위임
+function drawList(path) {
+  const box = document.querySelector(`[data-list-editor="${path}"]`);
+  const def = LIST_DEFS[path];
+  if (!box || !def) return;
+
+  const list = getList(path);
+  box.innerHTML = "";
+  box.classList.add("list-editor");
+
+  if (!list.length) {
+    const empty = document.createElement("div");
+    empty.className = "list-empty";
+    empty.textContent = "아직 항목이 없어요.";
+    box.appendChild(empty);
+  }
+
+  list.forEach((item, index) => {
+    const card = document.createElement(def.fold ? "details" : "div");
+    card.className = "list-card";
+    card.dataset.listItem = `${path}.${index}`;
+    if (def.fold) {
+      card.open = !LIST_FOLDED.has(item); // 접은 항목만 기억 (항목 객체 기준이라 이동해도 따라감)
+    }
+
+    const head = document.createElement(def.fold ? "summary" : "div");
+    head.className = "list-card-head";
+    const title = document.createElement("span");
+    title.className = "list-card-title";
+    title.dataset.listTitle = `${path}.${index}`;
+    title.textContent = listCardTitle(def, item, index);
+    head.appendChild(title);
+
+    if (!def.fixed) {
+      const tools = document.createElement("span");
+      tools.className = "list-card-tools";
+      const up = makeListButton("↑", "up", path, index, "위로");
+      const down = makeListButton("↓", "down", path, index, "아래로");
+      up.disabled = index === 0;
+      down.disabled = index === list.length - 1;
+      const remove = makeListButton("삭제", "remove", path, index, "이 항목 삭제");
+      remove.classList.add("danger");
+      tools.append(up, down, remove);
+      head.appendChild(tools);
+    }
+
+    const body = document.createElement("div");
+    body.className = "list-card-body";
+    (def.fields ? def.fields(`${path}.${index}`, item, index) : []).forEach((node) => body.appendChild(node));
+
+    card.append(head, body);
+    box.appendChild(card);
+  });
+
+  if (!def.fixed) {
+    const add = makeListButton(def.addLabel || `+ ${def.label} 추가`, "add", path, undefined, "항목 추가");
+    add.classList.add("list-add");
+    add.disabled = Boolean(def.max && list.length >= def.max);
+    box.appendChild(add);
+  }
+
+  fillFields(box);
+  if (def.sync) list.forEach((item, index) => def.sync(`${path}.${index}`, item));
+}
+
+// 접어 둔 목록 카드 (화면 전용). 항목 객체가 사라지면 자동으로 잊힘
+const LIST_FOLDED = new WeakSet();
+
+// 카드 접기/펼치기 기억 (editorPanel 하나에서 처리. toggle은 버블링이 없어 capture 사용)
+function handleListToggle(event) {
+  const card = event.target;
+  if (!card.matches || !card.matches("details.list-card[data-list-item]")) return;
+  const key = card.dataset.listItem;
+  const path = Object.keys(LIST_DEFS).find((p) => key.startsWith(`${p}.`));
+  if (!path) return;
+  const item = getList(path)[Number(key.slice(path.length + 1))];
+  if (!item) return;
+  if (card.open) LIST_FOLDED.delete(item);
+  else LIST_FOLDED.add(item);
+}
+
+function drawAllLists() {
+  Object.keys(LIST_DEFS).forEach(drawList);
+}
+
+// 입력한 칸이 목록 항목이면 그 카드 머리 글자만 갱신
+function updateListTitle(fieldPath) {
+  const path = Object.keys(LIST_DEFS).find((p) => fieldPath.startsWith(`${p}.`));
+  if (!path) return;
+  const index = Number(fieldPath.slice(path.length + 1).split(".")[0]);
+  const item = getList(path)[index];
+  const title = document.querySelector(`[data-list-title="${path}.${index}"]`);
+  if (item && title) title.textContent = listCardTitle(LIST_DEFS[path], item, index);
+  if (item && LIST_DEFS[path].sync) LIST_DEFS[path].sync(`${path}.${index}`, item);
+}
+
+// 추가·삭제·이동 버튼 (editorPanel 클릭 위임 하나로 처리)
+function handleListClick(event) {
+  const button = event.target.closest("[data-list-action]");
+  if (!button) return;
+  event.preventDefault(); // 접는 카드 머리(summary) 안 버튼이 카드를 접지 않게
+  if (button.disabled) return;
+
+  const path = button.dataset.listPath;
+  const def = LIST_DEFS[path];
+  if (!def) return;
+  const action = button.dataset.listAction;
+  const index = Number(button.dataset.listIndex);
+
+  let changed = false;
+  let focusIndex = null;
+  if (action === "add") {
+    changed = listAdd(path);
+  } else if (action === "remove") {
+    const item = getList(path)[index];
+    if (item && !isBlankItem(item, def) && !confirm(`${listCardTitle(def, item, index)}을(를) 삭제할까요?`)) return;
+    changed = listRemove(path, index);
+  } else if (action === "up" || action === "down") {
+    const dir = action === "up" ? -1 : 1;
+    changed = listMove(path, index, dir);
+    focusIndex = index + dir;
+  }
+  if (!changed) return;
+
+  drawList(path);
+  // 이동한 항목의 같은 버튼에 초점 유지 (연속 이동 편하게)
+  if (focusIndex !== null) {
+    const again = document.querySelector(
+      `[data-list-action="${action}"][data-list-path="${path}"][data-list-index="${focusIndex}"]`
+    );
+    if (again && !again.disabled) again.focus();
+  }
+  saveToLocalStorage();
+  render();
+}
+
+// 문단 fields에서 쓰는 입력칸 도우미 (라벨 + input/textarea/select)
+function listTextField(field, label, options = {}) {
+  const wrap = document.createElement("label");
+  wrap.className = "list-field";
+  const input = document.createElement(options.multiline ? "textarea" : "input");
+  if (!options.multiline) input.type = "text";
+  else input.rows = options.rows || 4;
+  if (options.placeholder) input.placeholder = options.placeholder;
+  input.dataset.field = field;
+  wrap.append(document.createTextNode(label), input);
+  return wrap;
+}
+
+function listSelectField(field, label, choices, noneLabel = "선택 안 함") {
+  const wrap = document.createElement("label");
+  wrap.className = "list-field";
+  wrap.append(document.createTextNode(label), makeSelect(field, noneLabel, choices));
+  return wrap;
+}
+
+/* ---------- 5-2. 고정 칸 접기 입력 (스토리 10칸 · 대사 21칸) ---------- */
+// 칸마다 접고 펴는 편집 블록(details) + 작성 상태 표시. 펼침 상태는 화면 전용이라 저장하지 않음.
+// prefix = state 경로 (story / voice). 칸 정의는 GAME_DATA, 저장은 state[prefix][slot.key] 글자만.
+const FOLD_EDITORS = {
+  story: {
+    boxId: "storyEditor",
+    slots: () => GAME_DATA.storySlots,
+    note: (slot) => getStoryUnlockText(slot),
+    rows: 8,
+  },
+  voice: {
+    boxId: "voiceEditor",
+    slots: () => GAME_DATA.voiceSlots,
+    note: (slot) => slot.code,
+    noteClass: "is-code",
+    rows: 3,
+  },
+};
+
+function buildFoldEditor(prefix) {
+  const def = FOLD_EDITORS[prefix];
+  const box = document.getElementById(def.boxId);
+  box.innerHTML = "";
+  def.slots().forEach((slot, index) => {
+    const block = document.createElement("details");
+    block.className = "story-slot";
+    if (index === 0) block.open = true;
+
+    const summary = document.createElement("summary");
+    const name = document.createElement("span");
+    name.className = "story-slot-name";
+    name.textContent = slot.label;
+    const status = document.createElement("span");
+    status.className = "story-slot-status";
+    status.dataset.slotStatus = `${prefix}.${slot.key}`;
+    summary.append(name, status);
+
+    const body = document.createElement("div");
+    body.className = "story-slot-body";
+    const note = document.createElement("div");
+    note.className = `story-slot-unlock${def.noteClass ? ` ${def.noteClass}` : ""}`;
+    note.textContent = def.note(slot);
+    const text = document.createElement("textarea");
+    text.rows = def.rows;
+    text.dataset.field = `${prefix}.${slot.key}`;
+    text.setAttribute("aria-label", slot.label);
+    body.append(note, text);
+
+    block.append(summary, body);
+    box.appendChild(block);
+  });
+}
+
+// 접힌 칸에서도 작성 여부가 보이게
+function fillFoldStatus(prefix) {
+  FOLD_EDITORS[prefix].slots().forEach((slot) => {
+    const el = document.querySelector(`[data-slot-status="${prefix}.${slot.key}"]`);
+    const text = state[prefix][slot.key].trim();
+    el.textContent = text ? `작성됨 · ${text.length}자` : "비어 있음";
+    el.classList.toggle("is-written", Boolean(text));
+  });
+}
+
+function setAllFoldOpen(prefix, open) {
+  document.querySelectorAll(`#${FOLD_EDITORS[prefix].boxId} .story-slot`).forEach((block) => {
+    block.open = open;
+  });
+}
+
+// 예전 이름 (스토리 전용) — 그대로 사용 가능
+function setAllStoryOpen(open) {
+  setAllFoldOpen("story", open);
+}
+
+// 「모두 펼치기 / 모두 접기」 버튼: data-fold-all="story|voice" data-fold-open="1|0" (editorPanel 클릭 위임)
+function handleFoldAllClick(event) {
+  const button = event.target.closest("[data-fold-all]");
+  if (!button || !FOLD_EDITORS[button.dataset.foldAll]) return;
+  setAllFoldOpen(button.dataset.foldAll, button.dataset.foldOpen === "1");
+}
+
+/* ---------- 5-3. 작중 행적 (가변 목록) ---------- */
+
+function historyLinkHint(item) {
+  const url = item.linkUrl.trim();
+  const text = item.linkText.trim();
+  if (url && !safeLinkUrl(url)) return ["warn", "http:// 또는 https:// 로 시작하는 주소만 쓸 수 있어요. 문서에 링크가 나오지 않아요."];
+  if (url && !text) return ["warn", "대체 텍스트도 넣어야 문서에 링크 문장이 나와요."];
+  if (!url && text) return ["warn", "링크 주소도 넣어야 문서에 링크 문장이 나와요."];
+  if (url && text) return ["ok", `문서에 「→ 자세한 내용은 ${text} 문서를 참고하십시오.」로 나와요.`];
+  return ["", "링크는 선택 사항이에요. 주소와 대체 텍스트를 둘 다 넣으면 안내 문장이 생겨요."];
+}
+
+defineList("history.items", {
+  label: "작중 행적",
+  addLabel: "+ 작중 행적 항목 추가",
+  item: { title: "", linkUrl: "", linkText: "", summary: "" },
+  title: (item) => item.title.trim(),
+  fields: (base) => {
+    const linkRow = document.createElement("div");
+    linkRow.className = "list-field-row";
+    linkRow.append(
+      listTextField(`${base}.linkUrl`, "링크 주소", { placeholder: "https://" }),
+      listTextField(`${base}.linkText`, "링크 대체 텍스트", { placeholder: "예) Remnant서사" })
+    );
+    const hint = document.createElement("div");
+    hint.className = "list-hint";
+    hint.dataset.linkHint = base;
+    const titleHint = document.createElement("div");
+    titleHint.className = "list-hint is-warn";
+    titleHint.dataset.titleHint = base;
+    titleHint.textContent = "제목이 있어야 문서에 나와요. 지금은 문서·목차에서 빠져 있어요 (적은 내용은 그대로 남아 있어요).";
+    return [
+      listTextField(`${base}.title`, "제목"),
+      titleHint,
+      linkRow,
+      hint,
+      listTextField(`${base}.summary`, "요약", { multiline: true, rows: 5 }),
+    ];
+  },
+  sync: (base, item) => {
+    const titleHint = document.querySelector(`[data-title-hint="${base}"]`);
+    if (titleHint) titleHint.hidden = Boolean(item.title.trim());
+    const hint = document.querySelector(`[data-link-hint="${base}"]`);
+    if (!hint) return;
+    const [kind, text] = historyLinkHint(item);
+    hint.textContent = text;
+    hint.className = `list-hint${kind ? ` is-${kind}` : ""}`;
+  },
+});
+
+/* ---------- 5-4. 스킨 (가변 목록) ---------- */
+
+function skinImageHint(item) {
+  const url = item.image.trim();
+  if (!url) return ["", "이미지 주소를 넣으면 문서에 큰 이미지로 나와요 (비워 두면 이미지 없이)."];
+  if (!safeLinkUrl(url)) return ["warn", "http:// 또는 https:// 로 시작하는 이미지 주소만 쓸 수 있어요. 문서에 이미지가 나오지 않아요."];
+  return ["ok", "문서에 이미지로 나와요."];
+}
+
+defineList("skin.items", {
+  label: "스킨",
+  addLabel: "+ 스킨 추가",
+  fold: true,
+  item: { type: "", name: "", image: "", illustrator: "", acquisition: "", effects: [], description: "" },
+  // 적용범위: 아는 키만, 중복 없이, GAME_DATA 순서로
+  clean: (item) => ({
+    ...item,
+    effects: Object.keys(GAME_DATA.skinEffect).filter((key) => item.effects.includes(key)),
+  }),
+  title: (item) => [item.type.trim(), item.name.trim()].filter(Boolean).join(" - "),
+  fields: (base) => {
+    const typeField = listTextField(`${base}.type`, "투영 종류", { placeholder: "예) 기본 투영" });
+    typeField.querySelector("input").setAttribute("list", "skinTypeOptions");
+    const row = document.createElement("div");
+    row.className = "list-field-row";
+    row.append(typeField, listTextField(`${base}.name`, "투영 이름"));
+
+    const titleHint = document.createElement("div");
+    titleHint.className = "list-hint is-warn";
+    titleHint.dataset.skinTitleHint = base;
+    titleHint.textContent = "투영 종류나 투영 이름 중 하나는 있어야 문서에 나와요 (적은 내용은 그대로 남아 있어요).";
+
+    const imageHint = document.createElement("div");
+    imageHint.className = "list-hint";
+    imageHint.dataset.skinImageHint = base;
+
+
+    const effects = document.createElement("div");
+    effects.className = "list-field";
+    effects.append(document.createTextNode("적용범위 (여러 개 선택 가능)"));
+    const grid = document.createElement("div");
+    grid.className = "skin-effect-grid";
+    Object.entries(GAME_DATA.skinEffect).forEach(([key, effect]) => {
+      const label = document.createElement("label");
+      label.className = "skin-effect-choice";
+      label.title = effect.desc;
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = key;
+      input.dataset.toggleField = `${base}.effects`;
+      const badge = document.createElement("span");
+      badge.className = "skin-effect-badge";
+      badge.style.background = effect.color;
+      badge.style.color = effect.text;
+      badge.textContent = effect.label;
+      const desc = document.createElement("small");
+      desc.textContent = effect.desc;
+      label.append(input, badge, desc);
+      grid.appendChild(label);
+    });
+    effects.appendChild(grid);
+
+    return [
+      row,
+      titleHint,
+      listTextField(`${base}.image`, "이미지 주소", { placeholder: "https://" }),
+      imageHint,
+      listTextField(`${base}.illustrator`, "일러스트레이터"),
+      listTextField(`${base}.acquisition`, "입수방법", { multiline: true, rows: 2 }),
+      effects,
+      listTextField(`${base}.description`, "기본 설명", { multiline: true, rows: 3 }),
+    ];
+  },
+  sync: (base, item) => {
+    const titleHint = document.querySelector(`[data-skin-title-hint="${base}"]`);
+    if (titleHint) titleHint.hidden = Boolean(item.type.trim() || item.name.trim());
+    const hint = document.querySelector(`[data-skin-image-hint="${base}"]`);
+    if (!hint) return;
+    const [kind, text] = skinImageHint(item);
+    hint.textContent = text;
+    hint.className = `list-hint${kind ? ` is-${kind}` : ""}`;
+  },
+});
+
+/* ---------- 5-5. 친밀도 서약 미리보기 안내 ---------- */
+// 입력 칸 아래에 칭호가 어떻게 조립되는지 글로 보여줌 (이름은 프로필에서 자동)
+function fillOathPreview() {
+  const el = document.getElementById("oathPreview");
+  if (!el) return;
+  const text = getOathTitleText(state);
+  el.textContent = text ? `칭호 미리보기: ${text}` : "칭호 수식어·단어를 넣으면 「수식어 · 이름의  단어」로 조립돼요. 이름은 프로필 이름을 자동으로 써요.";
+}
+
+/* ---------- 5-6. 인형 관계 (가변 목록) ---------- */
+
+defineList("relationship.items", {
+  label: "관계",
+  addLabel: "+ 관계 추가",
+  item: { relation: "", person: "" },
+  title: (item) => [item.relation.trim(), item.person.trim()].filter(Boolean).join(" - "),
+  fields: (base) => {
+    const row = document.createElement("div");
+    row.className = "list-field-row";
+    row.append(
+      listTextField(`${base}.relation`, "관계명", { placeholder: "예) 절친" }),
+      listTextField(`${base}.person`, "인물명", { placeholder: "예) 페르시카" })
+    );
+    return [row];
+  },
+});
 
 /* ---------- 6. 미리보기 그리기 ---------- */
 
@@ -893,7 +1459,11 @@ function getOutputHtml() {
 }
 
 // 이미지 캡처용 파트 목록 (미리보기 DOM 기준)
+// 미리보기에서 접어 둔 칸(스토리·목차)이 있어도 캡처에서 빠지지 않게 전부 펼친 뒤 돌려준다.
 function getPreviewParts() {
+  previewEl.querySelectorAll("details").forEach((el) => {
+    el.open = true;
+  });
   return [...previewEl.querySelectorAll("[data-part]")];
 }
 
@@ -901,17 +1471,21 @@ function getPreviewParts() {
 
 function refreshAll() {
   applyBirthdayRules();
+  drawAllLists();
   fillForm();
   saveToLocalStorage();
   render();
 }
 
 editorPanel.addEventListener("input", handleInput);
+editorPanel.addEventListener("click", handleListClick);
+editorPanel.addEventListener("toggle", handleListToggle, true);
+editorPanel.addEventListener("click", handleFoldAllClick);
 
 document.getElementById("resetButton").addEventListener("click", () => {
   if (!confirm("입력한 내용을 모두 지울까요?\n(저장하지 않은 내용은 되돌릴 수 없습니다)")) return;
 
-  state = cloneDefaults();
+  state = freshState();
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -932,5 +1506,7 @@ buildPositionPicker();
 buildAlgorithmPicker();
 buildIntimacySlots();
 buildGiftPicker();
+Object.keys(FOLD_EDITORS).forEach(buildFoldEditor);
+state = freshState(); // 문단 목록 등록(defineList)이 끝난 뒤 빈 문서 만들기
 loadFromLocalStorage();
 refreshAll();

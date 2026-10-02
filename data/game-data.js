@@ -231,6 +231,63 @@ const GAME_DATA = {
     breakthrough: { 1: "arma/arma1.png", 2: "arma/arma2.png", 3: "arma/arma3.png" },
     numeral: { 1: "arma/1.png", 2: "arma/2.png", 3: "arma/3.png" },
   },
+  // 스토리 고정 칸 (문서 순서 그대로). 캐릭터 JSON에는 key별 본문만 저장
+  storySlots: [
+    { key: "profile1", label: "인형 프로필 1", unlock: 2 },
+    { key: "profile2", label: "인형 프로필 2", unlock: 3 },
+    { key: "voice1", label: "인형 보이스 1", unlock: 4 },
+    { key: "voice2", label: "인형 보이스 2", unlock: 6 },
+    { key: "profile3", label: "인형 프로필 3", unlock: 7 },
+    { key: "voice3", label: "인형 보이스 3", unlock: 8 },
+    { key: "profile4", label: "인형 프로필 4", unlock: 10 },
+    { key: "voice4", label: "인형 보이스 4", unlock: 11 },
+    { key: "profile5", label: "인형 프로필 5", unlock: 13 },
+    { key: "voice5", label: "인형 보이스 5", unlock: 14 },
+  ],
+
+  // 대사(기본 보이스) 고정 21칸 (문서 순서 그대로). 캐릭터 JSON에는 key별 대사만 저장
+  voiceSlots: [
+    { key: "morning", label: "아침 인사", code: "MORNING" },
+    { key: "afternoon", label: "낮 인사", code: "AFTERNOON" },
+    { key: "evening", label: "저녁 인사", code: "EVENING" },
+    { key: "midnight", label: "밤 인사", code: "MIDNIGHT" },
+    { key: "dialogue1", label: "메인화면 대사 1", code: "DIALOGUE1" },
+    { key: "dialogue2", label: "메인화면 대사 2", code: "DIALOGUE2" },
+    { key: "dialogue4", label: "메인화면 대사 3", code: "DIALOGUE4" }, // 원본 코드 그대로 (DIALOGUE3 아님)
+    { key: "interact1", label: "대화 1", code: "INTERACT1" },
+    { key: "interact2", label: "대화 2", code: "INTERACT2" },
+    { key: "interact3", label: "대화 3", code: "INTERACT3" },
+    { key: "gain", label: "획득", code: "GAIN" },
+    { key: "levelup", label: "재능 돌파", code: "LEVELUP" },
+    { key: "rankup", label: "마인드 확장", code: "RANKUP" },
+    { key: "formation", label: "부대 편입", code: "FORMATION" },
+    { key: "battle", label: "전투 시작", code: "BATTLE" },
+    { key: "skill", label: "궁극기", code: "SKILL" },
+    { key: "mvp1", label: "MVP 1", code: "MVP1" },
+    { key: "mvp2", label: "MVP 2", code: "MVP2" },
+    { key: "retreat", label: "쓰러짐", code: "RETREAT" },
+    { key: "oath", label: "서약", code: "OATH" },
+    { key: "title", label: "타이틀 콜", code: "TITLE" },
+  ],
+
+  // 친밀도 서약 칭호 고정 이미지 (사용자가 올리는 이미지 아님)
+  oathTitle: {
+    prefix: "oath/title-prefix.png",
+    suffix: "oath/title-suffix.png",
+  },
+
+  // 스킨 적용범위 (복수 선택). 캐릭터 JSON에는 key 배열만 저장
+  skinEffect: {
+    model3d: { label: "3D모델", desc: "SD가 변경됨", color: "#00e5ff", text: "#111111" },
+    live2d: { label: "Live2D", desc: "Live2D가 추가됨", color: "#ffc800", text: "#111111" },
+    animated: { label: "Animated", desc: "움직임있는 일러스트가 추가됨", color: "#ffb300", text: "#111111" },
+    cutin: { label: "Cut-in", desc: "궁극기 컷씬이 변경됨", color: "#ff4b12", text: "#111111" },
+    voice: { label: "보이스", desc: "보이스 세트가 추가됨", color: "#d9a8ff", text: "#111111" },
+  },
+
+  // 스킨 투영 종류 입력 추천 (선택지 제한 아님 — 자유 입력)
+  skinTypeExamples: ["기본 투영", "확장 투영", "완벽 투영", "스킨 테마"],
+
   ui: {},
 };
 
@@ -283,4 +340,8 @@ function getIntimacyText(key, level) {
   const value = item.values[level - 1];
   if (value === undefined) return "";
   return `${item.stat} ${value}${item.unit} 상승.`;
+}
+
+function getStoryUnlockText(slot) {
+  return `친밀도 Lv.${slot.unlock}에 개방`;
 }
