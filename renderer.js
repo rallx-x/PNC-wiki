@@ -26,8 +26,8 @@ const SECTION_DEFS = [
   { key: "performance", title: "성능", fixed: true },
   { key: "algorithm", title: "추천 알고리즘", fixed: true },
   { key: "intimacy", title: "친밀도", fixed: true },
-  { key: "story", title: "스토리" },
-  { key: "history", title: "작중 행적", fixed: true }, // 필수 문단 (항목 0개여도 표시)
+  { key: "story", title: "스토리", fixed: true }, // 친밀도 스토리 (필수)
+  { key: "history", title: "작중 행적" }, // 작중 행적 페이지의 「작성함」 체크로 켜고 끔 (기본 켜짐)
   { key: "skin", title: "스킨", fixed: true },
   { key: "relationship", title: "인형 관계", fixed: true },
   { key: "voice", title: "대사", fixed: true },
@@ -50,7 +50,7 @@ const SECTION_SUBS = {
     if (getStatTable(state)) children.push("능력치");
     if (getSkillCards(state).length) children.push("스킬");
     if (children.length) nodes.push({ title: "기본", children, key: "basic" });
-    const eng = getEngraving(state);
+    const eng = state.sections && state.sections.weapon === false ? null : getEngraving(state); // 무장각인 「작성함」 체크
     if (eng) {
       const engChildren = [];
       if (eng.breakthroughs.length) engChildren.push("각인돌파");
@@ -161,19 +161,19 @@ const S = {
   imageCaptionWide: `grid-column:1 / -1;`,
 
   // 상단 정보 표 (div grid. 칸 사이 1px 선 = grid gap + 배경색)
-  info: `box-sizing:border-box;display:grid;grid-template-columns:2fr 3fr 2fr 3fr;gap:1px;margin:-1px 0 24px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
-  infoLabel: `display:flex;align-items:center;justify-content:center;padding:8px;background:${C.infoLabel};color:${C.white};font-weight:700;text-align:center;`,
-  infoValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;background:${C.white};color:${C.infoText};text-align:center;word-break:keep-all;`,
-  infoIcons: `display:flex;justify-content:center;gap:4px;`,
+  info: `box-sizing:border-box;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr) minmax(0,2fr) minmax(0,3fr);gap:1px;margin:-1px 0 24px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
+  infoLabel: `display:flex;align-items:center;justify-content:center;min-width:0;padding:8px 4px;overflow-wrap:anywhere;background:${C.infoLabel};color:${C.white};font-weight:700;text-align:center;`,
+  infoValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:8px 4px;background:${C.white};color:${C.infoText};text-align:center;word-break:keep-all;overflow-wrap:anywhere;`,
+  infoIcons: `display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:100%;`, // 좁으면 아이콘이 아래로 쌓임
   infoClassBadge: `display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;background:${C.infoIconBg};border-radius:6px;`,
   infoClassImg: `display:block;width:42px;height:42px;margin:0;border:0;object-fit:contain;`,
-  infoCompanyBadge: `display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:80px;height:80px;padding:1px;border-radius:6px;`,
+  infoCompanyBadge: `display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:80px;max-width:100%;height:auto;aspect-ratio:1/1;padding:1px;border-radius:6px;`,
   infoCompanyImg: `display:block;width:100%;height:100%;margin:0;border:0;object-fit:contain;`,
   infoAccent: `color:${C.orange};`, // 성우·일러스트 이름 강조 (링크 아님)
   infoFlag: `display:inline-block;width:20px;height:14px;margin:0 6px 0 0;border:0;vertical-align:middle;object-fit:cover;`,
 
   // 친밀도 (나무위키 템플릿: 폭 600px 표, 머리줄 #eee, Lv 배지 + 주황 수치)
-  intimacy: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:600px;border:1px solid ${C.infoLine};background:${C.infoLine};color:${C.infoText};`,
+  intimacy: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:600px;margin-left:auto;margin-right:auto;border:1px solid ${C.infoLine};background:${C.infoLine};color:${C.infoText};`,
   intimacyHead: `display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;background:${C.tableHead};text-align:center;`,
   intimacyRow: `display:grid;grid-template-columns:24px 80px 1fr;gap:1px;`,
   intimacyCell: `display:flex;align-items:center;justify-content:center;padding:6px;background:${C.white};text-align:center;`,
@@ -194,13 +194,13 @@ const S = {
   giftNameIcon: `display:inline-block;flex-shrink:0;width:14px;height:14px;margin:0;border:0;`,
 
   // 추천 알고리즘 (나무위키 템플릿: 구역마다 폭 500px 표, 테두리 2px #2e2e2e)
-  algoZone: `box-sizing:border-box;max-width:500px;margin:0 0 16px;border:2px solid ${C.algoHead};background:${C.white};color:${C.infoText};`,
+  algoZone: `box-sizing:border-box;max-width:500px;margin:0 auto 16px;border:2px solid ${C.algoHead};background:${C.white};color:${C.infoText};`,
   algoHead: `padding:6px;background:${C.algoHead};color:${C.white};font-weight:700;text-align:center;`,
-  algoRow: `display:grid;grid-template-columns:72px 1fr 1fr 1fr;border-top:1px solid ${C.infoLine};`,
+  algoRow: `display:grid;grid-template-columns:72px repeat(3,minmax(0,1fr));border-top:1px solid ${C.infoLine};`,
   algoRowLabel: `display:flex;align-items:center;justify-content:center;padding:4px;background:${C.tableHead};font-size:13px;text-align:center;`,
-  algoImageCell: `box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-height:80px;padding:8px;`,
-  algoBadge: `display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;`,
-  algoImg: `display:block;width:56px;height:56px;margin:0;border:0;object-fit:contain;`,
+  algoImageCell: `box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-width:0;min-height:80px;padding:8px 4px;`,
+  algoBadge: `display:inline-flex;align-items:center;justify-content:center;width:64px;max-width:100%;height:auto;aspect-ratio:1/1;border-radius:6px;`,
+  algoImg: `display:block;width:88%;height:88%;margin:0;border:0;object-fit:contain;`,
   algoNameCell: `padding:4px 6px;background:${C.algoNames};color:${C.white};text-align:center;font-size:14px;`,
   algoOptionValue: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;text-align:center;`,
   algoSharedRow: `display:grid;grid-template-columns:72px 1fr 72px 1fr;border-top:1px solid ${C.infoLine};`,
@@ -210,12 +210,17 @@ const S = {
   optionIconImg: `display:block;width:18px;height:18px;margin:0;border:0;object-fit:contain;`,
 
   // 인용문
-  quote: `margin:0 0 24px;padding:14px 16px;border-left:4px solid ${C.quoteBar};background:transparent;color:${C.text};line-height:1.7;`,
+  quote: `box-sizing:border-box;display:table;max-width:720px;margin:0 0 20px;padding:12px 18px;border:2px dashed ${C.rule};border-left:5px solid ${C.quoteBar};background:${C.soft};color:${C.text};line-height:1.7;overflow-wrap:anywhere;`,
+  overviewMedia: `box-sizing:border-box;max-width:640px;margin:0 0 20px;`,
+  overviewImage: `display:block;max-width:100%;width:auto;height:auto;margin:0;border:0;`,
+  videoLink: `position:relative;display:block;max-width:640px;text-decoration:none;`,
+  videoPlay: `position:absolute;top:50%;left:50%;width:68px;height:48px;margin:-24px 0 0 -34px;border-radius:12px;background:#ff0000;`,
+  videoPlayTri: `position:absolute;top:50%;left:50%;width:0;height:0;margin:-10px 0 0 -7px;border-top:10px solid transparent;border-bottom:10px solid transparent;border-left:18px solid #ffffff;`,
 
   // 목차 (details/summary — 스크립트 없이 접기/펼치기)
   toc: `display:block;box-sizing:border-box;width:fit-content;min-width:240px;margin:0 0 28px;background:${C.white};`,
   tocSummary: `display:flex;align-items:center;justify-content:space-between;gap:8px;box-sizing:border-box;min-height:54px;padding:14px 18px;border:1px solid ${C.border};background:${C.soft};color:${C.text};font-size:18px;font-weight:700;cursor:pointer;list-style:none;`,
-  tocArrow: `width:20px;text-align:center;color:${C.subText};font-size:14px;line-height:1;`,
+  tocArrow: `display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;`,
   tocBody: `padding:14px 18px 16px;border:1px solid ${C.border};border-top:none;`,
   tocItem: `margin:6px 0;line-height:1.4;`,
   tocLink: `color:${C.orange};font-weight:700;text-decoration:none;`,
@@ -223,18 +228,18 @@ const S = {
   // 문단
   section: `margin:0 0 36px;`,
   heading: `margin:0 0 20px;padding:0 0 8px;border-bottom:1px solid ${C.rule};color:${C.text};font-size:28px;font-weight:700;line-height:1.3;`,
-  headingArrow: `display:inline-block;width:28px;color:${C.subText};font-size:16px;vertical-align:top;padding-top:4px;`,
+  headingArrow: `display:inline-flex;align-items:center;justify-content:center;width:28px;height:1.3em;vertical-align:top;`,
   headingNumber: `color:${C.orange};`,
   paragraph: `margin:0;line-height:1.8;overflow-wrap:anywhere;`,
   subSection: `margin:0 0 28px;`,
   subHeading: `margin:0 0 14px;padding:0 0 6px;border-bottom:1px solid ${C.rule};color:${C.text};font-size:22px;font-weight:700;line-height:1.3;`,
-  subHeadingArrow: `display:inline-block;width:24px;color:${C.subText};font-size:14px;vertical-align:top;padding-top:3px;`,
+  subHeadingArrow: `display:inline-flex;align-items:center;justify-content:center;width:24px;height:1.3em;vertical-align:top;`,
   linkNote: `margin:0 0 12px;padding:0;color:${C.text};font-size:15px;line-height:1.7;`,
   link: `color:${C.link};text-decoration:none;`,
   tocSubItem: `margin:4px 0;line-height:1.4;`,
 
   // 스토리 카드: 칸마다 접기(details). 기본은 접힘, 캡처 때만 전부 펼침
-  story: `box-sizing:border-box;max-width:720px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};`,
+  story: `box-sizing:border-box;max-width:720px;margin:0 auto;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};`,
   storyHead: `padding:8px;background:${C.storyHead};color:${C.white};font-weight:700;text-align:center;`,
   storySlot: `display:block;margin:0;border-top:1px solid ${C.infoLine};`,
   storySummary: `display:block;padding:7px 10px;background:${C.tableHead};color:${C.infoText};font-weight:700;text-align:center;cursor:pointer;list-style:none;`,
@@ -250,7 +255,7 @@ const S = {
   relationName: `font-weight:700;`,
 
   // 친밀도 서약 (나무위키 서약 칸 참고: 갈색 머리줄 + 칭호 줄 + 구분선 + 설명)
-  oath: `box-sizing:border-box;max-width:600px;margin:16px 0 0;border:2px solid ${C.oathLine};background:${C.white};color:${C.infoText};`,
+  oath: `box-sizing:border-box;max-width:600px;margin:16px auto 0;border:2px solid ${C.oathLine};background:${C.white};color:${C.infoText};`,
   oathHead: `padding:6px;background:${C.oathHead};color:${C.white};font-weight:700;text-align:center;`,
   oathTitle: `display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 22px;padding:10px 12px 8px;font-weight:700;text-align:center;`,
   oathPart: `display:inline-flex;align-items:center;gap:6px;`,
@@ -276,18 +281,18 @@ const S = {
   markSup: `position:relative;top:-0.5em;margin-left:1px;color:${C.orange};font-size:0.72em;line-height:0;`,
 
   // 성능 > 능력치 표
-  statTable: `box-sizing:border-box;display:grid;gap:1px;max-width:720px;margin:0 0 16px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};font-size:14px;`,
+  statTable: `box-sizing:border-box;display:grid;gap:1px;max-width:720px;margin:0 auto 16px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};font-size:14px;`,
   statHead: `padding:6px;background:${C.tableHead};font-weight:700;text-align:center;`,
   statName: `display:flex;align-items:center;gap:6px;padding:5px 10px;background:${C.white};font-weight:700;`,
   statValue: `display:flex;align-items:center;justify-content:center;padding:5px 8px;background:${C.white};`,
 
   // 성능 > 무장각인 (대표 카드 · 각인돌파 · 각인강화 표)
-  engraveCard: `box-sizing:border-box;max-width:720px;margin:0 0 20px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};`,
+  engraveCard: `box-sizing:border-box;max-width:720px;margin:0 auto 20px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};`,
   engraveImageBox: `background:${C.soft};text-align:center;`,
   engraveName: `padding:8px 12px;background:${C.algoHead};color:${C.white};font-size:17px;font-weight:700;text-align:center;`,
   engraveQuote: `padding:12px 16px;font-size:14px;line-height:1.8;text-align:center;overflow-wrap:anywhere;`,
   engraveStage: `padding:5px 12px;background:${C.tableHead};border-bottom:1px solid ${C.infoLine};font-weight:700;text-align:center;`,
-  engraveWrap: `box-sizing:border-box;max-width:720px;margin:0 0 16px;overflow-x:auto;`,
+  engraveWrap: `box-sizing:border-box;max-width:720px;margin:0 auto 16px;overflow-x:auto;`,
   engraveBox: `box-sizing:border-box;min-width:560px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};font-size:14px;`,
   engraveGrid: `display:grid;gap:1px;background:${C.infoLine};`,
   engraveHead: `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;background:${C.tableHead};font-size:13px;font-weight:700;text-align:center;`,
@@ -296,7 +301,7 @@ const S = {
   engraveMax: `display:flex;align-items:center;justify-content:center;padding:6px 4px;background:${C.white};font-weight:700;color:${C.text};`,
 
   // 성능 > 스킬 카드
-  skillCard: `box-sizing:border-box;max-width:720px;margin:0 0 16px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};font-size:15px;`,
+  skillCard: `box-sizing:border-box;max-width:720px;margin:0 auto 16px;border:1px solid ${C.cardBorder};background:${C.white};color:${C.infoText};font-size:15px;`,
   skillTop: `display:grid;grid-template-columns:84px 1fr;`,
   skillIcon: `display:flex;align-items:center;justify-content:center;padding:8px;border-right:1px solid ${C.infoLine};background:${C.soft};`,
   skillIconImg: `display:block;width:64px;height:64px;margin:0;border:0;object-fit:contain;`,
@@ -321,7 +326,7 @@ const S = {
   skinTheme: `color:${C.orange};`,
 
   // 대사(기본 보이스): 일반 표 (접기 없음). 왼쪽 칸 이름+코드, 오른쪽 대사
-  voice: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:720px;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
+  voice: `box-sizing:border-box;display:flex;flex-direction:column;gap:1px;max-width:720px;margin-left:auto;margin-right:auto;border:1px solid ${C.cardBorder};background:${C.infoLine};color:${C.infoText};`,
   voiceHead: `padding:8px;background:${C.storyHead};color:${C.white};font-weight:700;text-align:center;`,
   voiceRow: `display:grid;grid-template-columns:150px 1fr;gap:1px;`,
   voiceLabel: `display:flex;flex-direction:column;justify-content:center;padding:8px 10px;background:${C.tableHead};text-align:center;`,
@@ -338,10 +343,10 @@ const S = {
   profileCard: `box-sizing:border-box;margin:0 0 28px;padding:0 0 16px;border:1px solid ${C.cardBorder};background:${C.white};overflow:hidden;`,
   profileTitle: `display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:${C.cardHead};color:${C.text};`,
   profileTitleSub: `font-size:13px;font-weight:600;`,
-  profileGrid: `display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:16px 16px 0;`,
-  profileItem: `display:flex;`,
+  profileGrid: `display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin:16px 16px 0;`,
+  profileItem: `display:flex;min-width:0;`,
   profileLabel: `box-sizing:border-box;width:64px;flex-shrink:0;padding:10px 12px;background:${C.label};color:${C.text};font-weight:700;white-space:nowrap;`,
-  profileValue: `box-sizing:border-box;flex:1;min-width:0;padding:10px 14px;background:${C.white};border:1px solid ${C.border};border-left:none;line-height:1.6;word-break:keep-all;`,
+  profileValue: `box-sizing:border-box;flex:1;min-width:0;padding:10px 14px;background:${C.white};border:1px solid ${C.border};border-left:none;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;`,
   historyLabel: `margin:18px 16px 0;padding:10px 14px;background:${C.label};font-weight:700;`,
   historyValue: `margin:0 16px;padding:16px;background:${C.soft};line-height:1.8;word-break:keep-all;`,
 
@@ -505,9 +510,32 @@ function renderInfo(state) {
 </div>`;
 }
 
+// 1. 개요: [대표 이미지 또는 유튜브 썸네일] → 인용구 → 고정 문장. 없는 것은 건너뜀
 function renderQuote(state) {
-  const quote = state.overview.quote.trim();
-  return `<div class="pncwiki-quote" style="${S.quote}">“${escMultiline(quote)}”</div>`;
+  const quote = isObj(state.overview) && typeof state.overview.quote === "string" ? state.overview.quote.trim() : "";
+  return quote ? `<div class="pncwiki-quote" style="${S.quote}">“${escMultiline(quote)}”</div>` : "";
+}
+
+// 유튜브 주소 → 영상 id (watch?v= / youtu.be / shorts / embed). 아니면 ""
+function youtubeId(raw) {
+  const url = safeLinkUrl(raw);
+  if (!url) return "";
+  const m = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,20})/.exec(url);
+  return m ? m[1] : "";
+}
+
+// 대표 이미지가 있으면 이미지, 없고 유튜브 주소가 있으면 썸네일 + 재생 표시 (누르면 유튜브로)
+function renderOverviewMedia(state) {
+  const ov = isObj(state.overview) ? state.overview : {};
+  const image = getImageSrc(ov.image);
+  if (image) return `<div class="pncwiki-overview-media" style="${S.overviewMedia}">${img(image, "", S.overviewImage)}</div>`;
+  const id = youtubeId(ov.video);
+  if (!id) return "";
+  return `<div class="pncwiki-overview-media" style="${S.overviewMedia}"><a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener noreferrer" style="${S.videoLink}">${img(
+    `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+    "동영상",
+    S.overviewImage
+  )}<span style="${S.videoPlay}"><span style="${S.videoPlayTri}"></span></span></a></div>`;
 }
 
 // 목차 하위 항목 (단계마다 18px 들여쓰기)
@@ -532,14 +560,23 @@ function renderToc(sections) {
 
   return `
 <details class="pncwiki-toc" open style="${S.toc}">
-  <summary style="${S.tocSummary}"><span>목차</span><span style="${S.tocArrow}">▽</span></summary>
+  <summary style="${S.tocSummary}"><span>목차</span><span style="${S.tocArrow}">${foldArrow(7)}</span></summary>
   <div style="${S.tocBody}">${items}</div>
 </details>`;
 }
 
+// 접기 삼각형: 글꼴과 상관없이 같은 모양이 되게 테두리로 직접 그림 (꽉 찬 ▼)
+// 접힌 상태 ▶ 는 문서 맨 앞의 작은 style 한 줄이 돌려 줌 — 티스토리가 style을 지워도 ▼ 로 깨지지 않고 나옴
+function foldArrow(size) {
+  const half = Math.round(size * 0.75);
+  return `<span class="pncwiki-arrow" style="display:inline-block;width:0;height:0;border-left:${half}px solid transparent;border-right:${half}px solid transparent;border-top:${size}px solid ${C.subText};transition:transform 0.15s;"></span>`;
+}
+
+const FOLD_STYLE = `<style>.pncwiki-doc details:not([open])>summary .pncwiki-arrow{transform:rotate(-90deg)}</style>`;
+
 // 문단 제목 = 접기 머리 (누르면 그 문단 전체가 접힘)
 function renderHeading(section) {
-  return `<summary class="pncwiki-heading" style="${S.skinSummary}${S.heading}"><span style="${S.headingArrow}">▽</span><span style="${S.headingNumber}">${section.number}.</span> ${esc(section.title)}</summary>`;
+  return `<summary class="pncwiki-heading" style="${S.skinSummary}${S.heading}"><span style="${S.headingArrow}">${foldArrow(8)}</span><span style="${S.headingNumber}">${section.number}.</span> ${esc(section.title)}</summary>`;
 }
 
 function renderProfileItem(label, valueHtml) {
@@ -554,8 +591,8 @@ function renderProfileItem(label, valueHtml) {
 // key → (state) => 본문 HTML. 없는 문단은 제목만 표시된다.
 
 const SECTION_BODY = {
-  overview: () =>
-    `<div style="${S.paragraph}">모바일 게임 <span style="${S.accent}">뉴럴 클라우드</span>에 등장하는 인형.</div>`,
+  overview: (state) =>
+    `${renderOverviewMedia(state)}${renderQuote(state)}<div style="${S.paragraph}">모바일 게임 <span style="${S.accent}">뉴럴 클라우드</span>에 등장하는 인형.</div>`,
 
   profile: (state) => {
     const p = state.profile;
@@ -667,7 +704,7 @@ function renderSkinItem(item, sub) {
   const descBox = desc || quote ? `<div style="${S.skinDesc}">${desc}${desc && quote ? `<div style="${S.skinDescRule}"></div>` : ""}${quote}</div>` : "";
   return `
   <details class="pncwiki-skin" id="${sub.anchor}"${item.isBase ? "" : " open"} style="${S.skinFold}">
-    <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}${S.skinItemHeading}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${sub.number}.</span> ${heading}</summary>
+    <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}${S.skinItemHeading}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${sub.number}.</span> ${heading}</summary>
     ${image}<div style="${S.skinTable}">${row("일러스트레이터", esc(item.illustrator), item.illustrator ? `color:${C.orange};` : "")}${row(
       "입수방법",
       escMultiline(item.acquisition)
@@ -678,7 +715,7 @@ function renderSkinItem(item, sub) {
 // 접는 하위 제목 (단계가 깊을수록 글자 작게)
 function foldHeading(node) {
   const size = [22, 22, 19, 17][Math.min(node.depth, 3)];
-  return `<summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}font-size:${size}px;"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${node.number}.</span> ${esc(node.title)}</summary>`;
+  return `<summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}font-size:${size}px;"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${node.number}.</span> ${esc(node.title)}</summary>`;
 }
 
 function renderSkin(state, section) {
@@ -1291,7 +1328,7 @@ function renderVoiceSet(set, sub, tone) {
     : "";
   return `
 <details class="pncwiki-voice-set" id="${sub.anchor}" style="${S.skinFold}">
-  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(set.headingText)}</summary>
+  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(set.headingText)}</summary>
   ${desc}${table}
 </details>`;
 }
@@ -1409,7 +1446,7 @@ function renderHistoryItem(item, sub, small) {
   const summary = item.summary.trim();
   return `
 <details class="pncwiki-subsection" id="${sub.anchor}" open style="${S.subSection}display:block;">
-  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}${small ? S.skinItemHeading : ""}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(item.title.trim())}</summary>
+  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}${small ? S.skinItemHeading : ""}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(item.title.trim())}</summary>
   ${renderHistoryLink(item)}${summary ? `<div style="${S.paragraph}">${escMultiline(summary)}</div>` : ""}
 </details>`;
 }
@@ -1420,7 +1457,7 @@ function renderHistory(state, section) {
   if (group && group.children.length) {
     return `
 <details class="pncwiki-subsection" id="${group.anchor}" open style="${S.subSection}display:block;">
-  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">▽</span><span style="${S.headingNumber}">${group.number}.</span> ${esc(group.title)}</summary>
+  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${group.number}.</span> ${esc(group.title)}</summary>
   ${items.map((item, i) => renderHistoryItem(item, group.children[i], true)).join("")}
 </details>`;
   }
@@ -1620,10 +1657,9 @@ function renderSection(state, section) {
 function renderDocument(state) {
   const sections = getActiveSections(state);
 
-  return `<div class="pncwiki-doc" style="${S.root}">
+  return `<div class="pncwiki-doc" style="${S.root}">${FOLD_STYLE}
 ${part("top", renderTopCard(state))}
 ${part("info", renderInfo(state))}
-${part("quote", renderQuote(state))}
 ${part("toc", renderToc(sections))}
 ${sections.map((section) => renderSection(state, section)).join("\n")}
 </div>`;

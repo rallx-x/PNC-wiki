@@ -792,15 +792,23 @@ body {
   display: none;
 }
 
+/* 접기 삼각형: 글자 대신 직접 그림 (글꼴마다 크기가 달라지지 않게). 접힘 ▶ / 펼침 ▼ */
 .story-slot summary::before {
-  content: "▶";
-  margin-right: 6px;
-  font-size: 10px;
-  color: var(--sub-text);
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--sub-text);
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+  margin-right: 8px;
+  flex-shrink: 0;
 }
 
 .story-slot[open] summary::before {
-  content: "▼";
+  transform: none;
 }
 
 .story-slot-name {
@@ -877,13 +885,21 @@ details.list-card > summary.list-card-head::-webkit-details-marker {
 }
 
 details.list-card > summary .list-card-title::before {
-  content: "▶ ";
-  font-size: 10px;
-  color: var(--sub-text);
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--sub-text);
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 details.list-card[open] > summary .list-card-title::before {
-  content: "▼ ";
+  transform: none;
 }
 
 details.list-card:not([open]) > summary.list-card-head {
@@ -1428,14 +1444,19 @@ details.list-card:not([open]) > summary.list-card-head {
 }
 
 .page-loc-arrow {
-  width: 14px;
-  color: var(--sub-text);
-  font-size: 12px;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin: 0 3px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--sub-text);
+  transform: rotate(-90deg);
   transition: transform 0.15s;
 }
 
 .page-nav[open] .page-loc-arrow {
-  transform: rotate(90deg);
+  transform: none;
 }
 
 .page-loc-part {
@@ -1538,4 +1559,374 @@ button.page-nav-item:hover {
 
 .page-step-btn.is-empty {
   visibility: hidden;
+}
+
+/* 글 꾸미기 안내 접기도 같은 삼각형 */
+.markup-guide > summary {
+  list-style: none;
+}
+
+.markup-guide > summary::-webkit-details-marker {
+  display: none;
+}
+
+.markup-guide > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--sub-text);
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.markup-guide[open] > summary::before {
+  transform: none;
+}
+
+/* 작성함 체크 (무장각인 · 작중 행적): 끄면 체크박스만 남김 */
+.form-group .section-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form-group .section-check input {
+  width: auto;
+  accent-color: var(--accent);
+}
+
+.form-group.is-unchecked .section-check {
+  border-color: var(--border);
+  background: var(--panel-soft);
+  color: var(--sub-text);
+}
+
+.form-group.is-unchecked > :not(.section-check) {
+  display: none;
+}
+
+/* 인형 관계 빠른 추가 */
+.relation-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.relation-presets > span {
+  margin-right: 4px;
+  color: var(--sub-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   폰 · 패드 (터치 화면, 또는 폭 1199px 이하)
+   위: 미리보기 / 가운데: 파트·항목 탭 (끌어서 비율 조절) / 아래: 입력
+   키보드가 올라오면 탭은 숨기고 미리보기 + 입력칸만
+   ========================================================= */
+.menu-toggle,
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: var(--app-h, 100dvh);
+    min-height: 0;
+    padding: 0;
+  }
+
+  .app-header {
+    position: relative;
+    flex: none;
+    height: 48px;
+    margin: 0;
+    padding: 0 8px 0 14px;
+    gap: 8px;
+  }
+
+  .app-header h1 {
+    overflow: hidden;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-title {
+    flex: 1;
+  }
+
+  .app-title span {
+    display: none;
+  }
+
+  /* 상단 버튼들 → ☰ 메뉴 안으로 */
+  .header-center,
+  .theme-switch,
+  .header-actions {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    cursor: pointer;
+  }
+
+  .menu-toggle span {
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--text);
+  }
+
+  .app-header.is-menu-open .header-center,
+  .app-header.is-menu-open .theme-switch,
+  .app-header.is-menu-open .header-actions {
+    display: flex;
+    position: absolute;
+    right: 8px;
+    z-index: 40;
+    justify-content: flex-start;
+  }
+
+  .app-header.is-menu-open::after {
+    content: "";
+    position: absolute;
+    top: 52px;
+    right: 8px;
+    z-index: 39;
+    width: 260px;
+    height: 168px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .app-header.is-menu-open .header-center {
+    top: 64px;
+    width: 236px;
+    margin-right: 12px;
+  }
+
+  .app-header.is-menu-open .mode-switch {
+    width: 100%;
+  }
+
+  .app-header.is-menu-open .mode-switch button {
+    flex: 1;
+    padding: 8px 6px;
+  }
+
+  .app-header.is-menu-open .theme-switch {
+    top: 112px;
+    width: 236px;
+    margin-right: 12px;
+    justify-content: space-between;
+  }
+
+  .app-header.is-menu-open .theme-switch button {
+    flex: 1;
+    height: 34px;
+  }
+
+  .app-header.is-menu-open .header-actions {
+    top: 160px;
+    width: 236px;
+    margin-right: 12px;
+    gap: 6px;
+  }
+
+  .app-header.is-menu-open .header-button {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 9px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .workspace {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .workspace > * {
+    min-width: 0;
+  }
+
+  .preview-panel {
+    order: 1;
+    flex: 0 0 var(--split, 45%);
+    min-height: 60px;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .preview-panel .panel-header {
+    display: none;
+  }
+
+  .wiki-preview {
+    padding: 12px;
+  }
+
+  .mobile-tabs {
+    order: 2;
+    display: block;
+    flex: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    user-select: none;
+  }
+
+  .split-handle {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0 2px;
+    cursor: row-resize;
+    touch-action: none;
+  }
+
+  .split-handle span {
+    width: 44px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+
+  .tab-row {
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-row:empty {
+    display: none;
+  }
+
+  .tab-row button {
+    flex: none;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--sub-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .tab-parts button.is-current {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .tab-subs {
+    padding-top: 0;
+    padding-bottom: 8px;
+  }
+
+  .tab-subs button {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .tab-subs button.is-current {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .editor-panel {
+    order: 3;
+    position: static;
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 위치 줄·위쪽 이전/다음은 탭이 대신함 */
+  .page-nav,
+  .page-step[data-page-step="top"] {
+    display: none;
+  }
+
+  .page-step-btn {
+    padding: 12px 10px;
+    font-size: 14px;
+  }
+
+  .form-group {
+    padding: 16px 14px;
+  }
+
+  /* 글 쓰는 중 (키보드 올라옴): 탭 숨기고 미리보기 + 입력칸만 */
+  body.is-typing .mobile-tabs .tab-row {
+    display: none;
+  }
+
+  body.is-typing .page-step {
+    display: none;
+  }
+
+  /* 지금 쓰는 칸이 들어가는 문서 위치 표시 */
+  #preview .pncwiki-editing {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
 }

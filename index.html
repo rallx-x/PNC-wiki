@@ -43,6 +43,11 @@
                 <input id="loadJsonInput" type="file" accept=".json" hidden />
                 <button type="button" class="header-button danger" id="resetButton">초기화</button>
             </div>
+
+            <!-- 폰·패드: 위 버튼들을 이 메뉴 하나로 모음 -->
+            <button type="button" class="menu-toggle" id="menuToggle" aria-label="메뉴" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
         </header>
 
         <main class="workspace">
@@ -50,7 +55,7 @@
                 <!-- 지금 쓰는 곳 + 눌러서 펼치면 이동 목록 (script.js가 채움) -->
                 <details class="page-nav" id="pageNav">
                     <summary class="page-loc">
-                        <span class="page-loc-arrow" aria-hidden="true">▸</span>
+                        <span class="page-loc-arrow" aria-hidden="true"></span>
                         <span class="page-loc-part" id="pageLocPart"></span>
                         <span class="page-loc-sep" id="pageLocSep" aria-hidden="true">›</span>
                         <span class="page-loc-title" id="pageLocTitle"></span>
@@ -66,12 +71,12 @@
 
                 <div class="form-section-title">프로필</div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-names">
                     <label for="dollName">이름</label>
                     <input id="dollName" type="text" data-field="profile.name" />
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-names">
                     <label for="dollNameCn">중국어명</label>
                     <input id="dollNameCn" type="text" data-field="profile.names.cn" />
 
@@ -82,17 +87,17 @@
                     <input id="dollNameEn" type="text" data-field="profile.names.en" />
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label for="dollJob">직업</label>
                     <input id="dollJob" type="text" data-field="profile.job" />
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label for="dollModel">모델</label>
                     <input id="dollModel" type="text" data-field="profile.model" />
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label>기업</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
@@ -142,7 +147,7 @@
                     </div>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-class">
                     <label>클래스</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
@@ -177,14 +182,14 @@
                     </div>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-class">
                     <label>포지션 (최대 2개)</label>
                     <!-- 체크박스는 GAME_DATA.position으로 자동 생성. 여러 개 선택, 고른 순서대로 표시 -->
                     <div class="gift-summary" id="positionSummary"></div>
                     <div class="checkbox-grid radio-grid" id="positionPicker"></div>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-class">
                     <label>레어도</label>
                     <div class="checkbox-grid radio-grid rarity-grid">
                         <label>
@@ -209,7 +214,7 @@
                     </div>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label>생일</label>
 
                     <div class="birthday-select-row">
@@ -241,7 +246,7 @@
                     </label>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label for="dollVoiceName">성우</label>
                     <input id="dollVoiceName" type="text" data-field="profile.voiceActor.name" />
 
@@ -250,17 +255,17 @@
                     <div class="checkbox-grid radio-grid" data-options="country" data-options-field="profile.voiceActor.country"></div>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-info">
                     <label for="dollIllustrator">일러스트</label>
                     <input id="dollIllustrator" type="text" data-field="profile.illustrator" />
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-history">
                     <label for="dollHistory">이력</label>
                     <textarea id="dollHistory" rows="4" data-field="profile.history"></textarea>
                 </div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="story-type">
                     <label>등장 스토리</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
@@ -283,7 +288,16 @@
 
                 <div class="form-section-title">개요</div>
 
-                <div class="form-group" data-page="profile">
+                <div class="form-group" data-page="profile-overview">
+                    <label>대표 이미지 · 동영상 (선택)</label>
+                    <div class="list-guide">문서 「1. 개요」 맨 위에 나와요. 이미지가 있으면 이미지가, 없으면 유튜브 영상 썸네일(누르면 유튜브로 이동)이 나와요. 둘 다 비우면 생략돼요.</div>
+                    <!-- 이미지 칸은 script.js의 imageField가 채움 -->
+                    <div id="overviewImageField"></div>
+                    <label class="list-field">유튜브 주소<input type="text" data-field="overview.video" aria-label="유튜브 주소" /></label>
+                    <div class="list-hint" id="overviewVideoHint"></div>
+                </div>
+
+                <div class="form-group" data-page="profile-overview">
                     <label for="dollQuote">인용문</label>
                     <textarea id="dollQuote" rows="4" data-field="overview.quote"></textarea>
                 </div>
@@ -343,8 +357,8 @@
                 </div>
 
                 <div class="form-group" data-page="perf-engraving">
-                    <label>무장각인</label>
-                    <div class="list-guide">쓴 내용이 있으면 문서에 「무장각인」이 생겨요. 비워 두면 나오지 않아요.</div>
+                    <label class="section-check"><input type="checkbox" data-field="sections.weapon" /> 무장각인 작성함</label>
+                    <div class="list-guide">체크하면 입력칸이 열리고 문서에 「무장각인」이 나와요. 체크를 꺼도 써 둔 내용은 지워지지 않아요.</div>
                     <!-- 각인명·이미지·각인돌파 I~III·각인강화는 script.js가 자동 생성 -->
                     <div id="engravingEditor"></div>
                 </div>
@@ -407,6 +421,7 @@
                 <div class="form-section-title">작중 행적</div>
 
                 <div class="form-group" data-page="history">
+                    <label class="section-check"><input type="checkbox" data-field="sections.history" /> 작중 행적 작성함</label>
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "history.items")이 그림 -->
                     <div data-list-editor="history.items"></div>
                 </div>
@@ -460,9 +475,17 @@
 
                 <div class="form-group" data-page="relationship">
                     <div class="list-guide">
-                        <b>관계명 예시</b> 절친 · 친구 · 앙숙 · 직장동료 · 중요 협력자
-                        <span>예시일 뿐이에요. 관계명·인물명 모두 자유롭게 적어 주세요.</span>
                         <span><b>링크 걸기</b> 인물명에 <code>[이름](https://주소)</code>처럼 쓰면 이름에 링크가 걸려요 (다른 사람 OC 문서 등). 여러 명도 돼요 — <code>[A](주소), [B](주소)</code></span>
+                    </div>
+                    <!-- 빠른 추가: 누르면 그 관계명으로 카드가 새로 생김 (누른 순서대로, 순서는 ↑↓로) -->
+                    <div class="relation-presets" id="relationPresets">
+                        <span>빠른 추가</span>
+                        <button type="button" class="list-btn" data-relation-preset="절친">절친</button>
+                        <button type="button" class="list-btn" data-relation-preset="친구">친구</button>
+                        <button type="button" class="list-btn" data-relation-preset="앙숙">앙숙</button>
+                        <button type="button" class="list-btn" data-relation-preset="직장동료">직장동료</button>
+                        <button type="button" class="list-btn" data-relation-preset="중요 협력자">중요 협력자</button>
+                        <button type="button" class="list-btn" data-relation-preset="경계">경계</button>
                     </div>
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "relationship.items")이 그림 -->
                     <div data-list-editor="relationship.items"></div>
@@ -497,76 +520,17 @@
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "etc.items")이 그림 -->
                     <div data-list-editor="etc.items"></div>
                 </div>
-
-                <div class="form-section-title">문단 설정</div>
-
-                <div class="form-group" data-page="settings">
-                    <div class="checkbox-grid section-toggle-grid">
-                        <label>
-                            <input type="checkbox" data-section="overview" checked disabled />
-                            개요
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="profile" checked disabled />
-                            프로필
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="performance" checked disabled />
-                            성능
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-field="sections.weapon" />
-                            무장각인
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="algorithm" checked disabled />
-                            추천 알고리즘
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="intimacy" checked disabled />
-                            친밀도
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-field="sections.story" />
-                            스토리
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="history" checked disabled />
-                            작중 행적
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="skin" checked disabled />
-                            스킨
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="relationship" checked disabled />
-                            인형 관계
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="voice" checked disabled />
-                            대사
-                        </label>
-
-                        <label>
-                            <input type="checkbox" data-section="etc" checked disabled />
-                            기타
-                        </label>
-                    </div>
-                </div>
                 <div class="page-step" data-page-step="bottom"></div>
             </section>
 
-            <section class="preview-panel">
+            <!-- 폰·패드 전용: 끌어서 위아래 비율 조절 + 파트 탭 + 항목 탭 (PC에서는 숨김) -->
+            <nav class="mobile-tabs" id="mobileTabs" aria-label="입력 바로가기">
+                <div class="split-handle" id="splitHandle" aria-hidden="true"><span></span></div>
+                <div class="tab-row tab-parts" id="tabParts"></div>
+                <div class="tab-row tab-subs" id="tabSubs"></div>
+            </nav>
+
+            <section class="preview-panel" id="previewPanel">
                 <div class="panel-header">
                     <h2>미리보기</h2>
                     <span>Preview</span>

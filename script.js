@@ -69,6 +69,8 @@ const DEFAULT_STATE = {
   },
   overview: {
     quote: "",
+    image: "", // 1. 개요 대표 이미지 (파일 또는 주소, 선택)
+    video: "", // 유튜브 주소 (선택) — 이미지가 없을 때 썸네일 + 링크로 나옴
   },
   // 성능 > 기본: 스킬 3종 + 평가 (능력치는 별도 작업 중)
   //   levels = 1레벨 효과 글 ({처음~끝} 등은 레벨마다 자동 계산), overrides = 레벨별로 직접 고친 글 ("" = 자동)
@@ -185,9 +187,11 @@ const DEFAULT_STATE = {
     items: [], // { text }
   },
   // 켜고 끌 수 있는 문단만. (고정 문단은 SECTION_DEFS의 fixed — 작중 행적은 필수 문단)
+  // 작성할지 고르는 문단 (기본 켜짐). 꺼도 써 둔 내용은 그대로 두고 문서에서만 뺌
+  //   weapon = 3.2 무장각인 / history = 작중 행적. 스토리(친밀도)는 필수라 없음
   sections: {
     weapon: true,
-    story: true,
+    history: true,
   },
 };
 
@@ -1026,6 +1030,8 @@ function fillForm() {
   fillReviewEditor();
   fillStatEditor();
   fillEngravingEditor();
+  fillSectionChecks();
+  fillOverviewVideoHint();
 }
 
 // 폼 → state (입력할 때마다)
@@ -1141,6 +1147,8 @@ function handleInput(event) {
     }
   }
   if (path.startsWith("performance.stats.") || path.startsWith("performance.engraving.")) fillEngravingEditor();
+  if (path.startsWith("sections.")) fillSectionChecks();
+  if (path === "overview.video") fillOverviewVideoHint();
   const skillMatch = path.match(/^performance\.skills\.(\w+)\.(levels|name)$/);
   if (skillMatch) {
     fillSkillStatus();
@@ -1644,6 +1652,7 @@ function fillImageFields(root) {
 }
 
 function afterImageChange() {
+  fillOverviewVideoHint();
   fillImageFields(document);
   saveToLocalStorage();
   render();
@@ -3078,7 +3087,7 @@ const PREVIEW_PALETTES = {
       "#222222": "#e2e4e8", "#373a3c": "#d6d9de", "#666666": "#a3a9b3", "#0275d8": "#5aa9f0",
       "#1971c2": "#4dabf7", "#2b8a3e": "#51cf66", "#b08900": "#e0b400", "#7048e8": "#9775fa", "#c2417a": "#f06595", "#d9363e": "#ff6b6b",
     },
-    line: { "#cccccc": "#3a3e46", "#d8dde5": "#3a3e46", "#505050": "#5b606a" },
+    line: { "#cccccc": "#3a3e46", "#d8dde5": "#3a3e46", "#505050": "#5b606a", "#666666": "#a3a9b3", "#999999": "#7d838d" },
   },
   mid: {
     bg: {
@@ -3105,6 +3114,7 @@ function themePreviewHtml(html) {
 
 function render() {
   previewEl.innerHTML = themePreviewHtml(renderDocument(state));
+  if (typeof markEditing === "function" && editingTarget) markEditing(false); // 폰·패드: 쓰는 칸 표시 유지
   refreshVoiceSkinSelects(); // 스킨 이름·보이스 체크가 바뀌면 보이스 세트 선택지도 따라감
   refreshExprSourceSelects();
   ["voice.sets", "expression.groups"].forEach((path) => getList(path).forEach((item, i) => {
@@ -3174,7 +3184,18 @@ document.getElementById("saveJsonButton").addEventListener("click", downloadJson
 // fixed: "one" = 언제나 한 페이지 / "split" = 언제나 나눔 (스토리는 칸 하나씩)
 // 숨김은 .is-off-page 클래스로만 (다른 코드가 쓰는 hidden 속성과 섞이지 않게). 화면 전용이라 state에 넣지 않음.
 const EDITOR_PARTS = [
-  { key: "profile", title: "프로필", fixed: "one", pages: [{ key: "profile", title: "프로필" }] },
+  {
+    key: "profile",
+    title: "프로필",
+    fixed: "split",
+    pages: [
+      { key: "profile-names", title: "이름" },
+      { key: "profile-overview", title: "개요" },
+      { key: "profile-info", title: "기본 정보" },
+      { key: "profile-class", title: "클래스 · 포지션 · 레어도" },
+      { key: "profile-history", title: "이력" },
+    ],
+  },
   {
     key: "performance",
     title: "성능",
@@ -3195,7 +3216,15 @@ const EDITOR_PARTS = [
       { key: "int-oath", title: "서약" },
     ],
   },
-  { key: "story", title: "스토리", fixed: "split", pages: [{ key: "story", title: "스토리", slots: "story" }] },
+  {
+    key: "story",
+    title: "스토리",
+    fixed: "split",
+    pages: [
+      { key: "story-type", title: "등장 스토리" },
+      { key: "story", title: "스토리", slots: "story" },
+    ],
+  },
   { key: "history", title: "작중 행적", pages: [{ key: "history", title: "작중 행적" }] },
   {
     key: "skin",
@@ -3218,7 +3247,6 @@ const EDITOR_PARTS = [
     ],
   },
   { key: "etc", title: "기타", pages: [{ key: "etc", title: "기타" }] },
-  { key: "settings", title: "문단 설정", fixed: "one", pages: [{ key: "settings", title: "문단 설정" }] },
 ];
 const WRITE_MODE_KEY = "pnc_wiki_write_mode";
 const PAGE_KEY = "pnc_wiki_page";
@@ -3390,6 +3418,7 @@ function showEditorPage(index, { scroll = false } = {}) {
   document.getElementById("pageLocCount").textContent = pages.length > 1 ? `${pages.indexOf(page) + 1} / ${pages.length}` : "";
   renderPageSteps();
   renderPageNavList();
+  renderMobileTabs();
   storeSet(PAGE_KEY, page.id);
   if (scroll) {
     editorPanel.scrollTop = 0; // 새 페이지는 맨 위부터
@@ -3469,6 +3498,241 @@ document.querySelector(".mode-switch").addEventListener("click", (event) => {
   if (!button || button.dataset.writeMode === writeMode) return;
   storeSet(WRITE_MODE_KEY, button.dataset.writeMode);
   setWriteMode(button.dataset.writeMode);
+});
+
+/* ---------- 작성함 체크 (무장각인 · 작중 행적) / 개요 이미지·동영상 / 관계 빠른 추가 ---------- */
+
+// 체크를 끄면 그 묶음의 입력칸은 숨기고 체크박스만 남김 (써 둔 내용은 그대로)
+function fillSectionChecks() {
+  document.querySelectorAll(".section-check input[data-field]").forEach((box) => {
+    box.closest(".form-group").classList.toggle("is-unchecked", !box.checked);
+  });
+}
+
+function fillOverviewVideoHint() {
+  const el = document.getElementById("overviewVideoHint");
+  const raw = state.overview.video.trim();
+  const ok = Boolean(youtubeId(raw));
+  el.textContent = !raw
+    ? ""
+    : !ok
+      ? "유튜브 영상 주소(youtube.com/watch?v=… 또는 youtu.be/…)만 쓸 수 있어요. 지금 주소는 문서에 나오지 않아요."
+      : state.overview.image
+        ? "대표 이미지가 있어서 이미지가 먼저 나와요 (동영상 썸네일은 이미지를 지우면 나와요)."
+        : "영상 썸네일이 나오고, 누르면 유튜브로 이동해요.";
+  el.classList.toggle("is-warn", Boolean(raw) && !ok);
+  el.classList.toggle("is-ok", ok);
+}
+
+function handlePresetClick(event) {
+  const button = event.target.closest("[data-relation-preset]");
+  if (!button) return;
+  state.relationship.items.push({ relation: button.dataset.relationPreset, person: "" });
+  drawList("relationship.items");
+  saveToLocalStorage();
+  render();
+  // 새 카드의 인물명 칸으로 바로
+  const field = document.querySelector(`[data-field="relationship.items.${state.relationship.items.length - 1}.person"]`);
+  if (field) field.focus();
+}
+
+editorPanel.addEventListener("click", handlePresetClick);
+document.getElementById("overviewImageField").appendChild(imageField("overview.image", "대표 이미지 (움짤 gif도 가능)"));
+
+/* ---------- 폰 · 패드 화면 (픽크루 방식) ---------- */
+// 위 미리보기 / 가운데 파트·항목 탭 / 아래 입력. 화면 배치는 style.css의 같은 조건(@media)이 맡고,
+// 여기서는 탭 그리기 · 비율 끌기 · 키보드 · 쓰는 칸 따라가기 · ☰ 메뉴만.
+const MOBILE_QUERY = window.matchMedia("(max-width: 1199px), (hover: none) and (pointer: coarse)");
+const SPLIT_KEY = "pnc_wiki_split";
+const previewPanel = document.getElementById("previewPanel");
+let editingTarget = null; // 지금 쓰는 칸 → 미리보기에서 찾는 함수
+
+function isMobileLayout() {
+  return MOBILE_QUERY.matches;
+}
+
+function renderMobileTabs() {
+  const page = editorPages[pageIndex];
+  if (!page) return;
+  const parts = document.getElementById("tabParts");
+  const subs = document.getElementById("tabSubs");
+  parts.innerHTML = EDITOR_PARTS.map((part) => {
+    const first = editorPages.findIndex((p) => p.part === part.key);
+    return first < 0 ? "" : `<button type="button" data-page-jump="${first}" class="${part.key === page.part ? "is-current" : ""}">${esc(part.title)}</button>`;
+  }).join("");
+  const own = editorPages.filter((p) => p.part === page.part);
+  subs.innerHTML = own.length > 1
+    ? own.map((p) => {
+        const i = editorPages.indexOf(p);
+        return `<button type="button" data-page-jump="${i}" class="${i === pageIndex ? "is-current" : ""}">${esc(p.title)}</button>`;
+      }).join("")
+    : "";
+  // 고른 탭이 보이게 옆으로 밀어 줌
+  [parts, subs].forEach((row) => {
+    const cur = row.querySelector(".is-current");
+    if (cur) row.scrollLeft = cur.offsetLeft - row.clientWidth / 2 + cur.offsetWidth / 2;
+  });
+}
+
+document.getElementById("mobileTabs").addEventListener("click", (event) => {
+  const jump = event.target.closest("[data-page-jump]");
+  if (!jump) return;
+  showEditorPage(Number(jump.dataset.pageJump), { scroll: true });
+  followPage();
+});
+
+// 앱 높이 = 실제로 보이는 높이 (키보드가 올라오면 줄어듦)
+function fitAppHeight() {
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--app-h", `${Math.round(h)}px`);
+  if (window.visualViewport) window.scrollTo(0, 0);
+}
+(window.visualViewport || window).addEventListener("resize", fitAppHeight);
+fitAppHeight();
+
+// 위아래 비율 끌기 (탭 줄 위 손잡이)
+(function setupSplit() {
+  const workspace = document.querySelector(".workspace");
+  const saved = Number(storeGet(SPLIT_KEY));
+  if (saved >= 15 && saved <= 80) workspace.style.setProperty("--split", `${saved}%`);
+  const handle = document.getElementById("splitHandle");
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    const move = (e) => {
+      const box = workspace.getBoundingClientRect();
+      const pct = Math.max(15, Math.min(80, ((e.clientY - box.top) / box.height) * 100));
+      workspace.style.setProperty("--split", `${pct.toFixed(1)}%`);
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      const value = parseFloat(workspace.style.getPropertyValue("--split"));
+      if (value) storeSet(SPLIT_KEY, String(Math.round(value)));
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  });
+})();
+
+// ☰ 메뉴
+const appHeader = document.querySelector(".app-header");
+document.getElementById("menuToggle").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const open = !appHeader.classList.contains("is-menu-open");
+  appHeader.classList.toggle("is-menu-open", open);
+  document.getElementById("menuToggle").setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", (event) => {
+  if (!appHeader.classList.contains("is-menu-open")) return;
+  if (event.target.closest(".header-center, .theme-switch, .header-actions, #menuToggle")) return;
+  appHeader.classList.remove("is-menu-open");
+  document.getElementById("menuToggle").setAttribute("aria-expanded", "false");
+});
+
+// ---- 쓰는 칸 → 문서 위치 ----
+// 하위 문단 제목으로 앵커 찾기 (예: 성능 › 평가)
+function anchorByTitle(sectionKey, title) {
+  const section = getActiveSections(state).find((s) => s.key === sectionKey);
+  if (!section) return null;
+  const walk = (nodes) => {
+    for (const n of nodes) {
+      if (n.title === title) return n.anchor;
+      const found = walk(n.children);
+      if (found) return found;
+    }
+    return null;
+  };
+  return walk(section.subs);
+}
+
+const byId = (id) => (id ? document.getElementById(id) : null);
+const sectionEl = (key) => byId(`pncwiki-s-${key}`);
+
+// 입력칸 경로 → 미리보기 안의 요소 (없으면 그 문단)
+function previewTargetFor(path) {
+  if (!path) return null;
+  const head = path.split(".");
+  if (path === "profile.name" || path.startsWith("profile.names")) return previewEl.querySelector('[data-part="top"]');
+  if (path.startsWith("overview.")) return sectionEl("overview");
+  if (path === "profile.history") return sectionEl("profile");
+  if (path === "profile.storyType") return sectionEl("history") || sectionEl("story");
+  if (head[0] === "profile") return previewEl.querySelector('[data-part="info"]');
+  if (path.startsWith("performance.stats")) return previewEl.querySelector(".pncwiki-stats") || sectionEl("performance");
+  if (path.startsWith("performance.skills.")) {
+    const cards = getSkillCards(state);
+    const i = cards.findIndex((c) => c.slot.key === head[2]);
+    return previewEl.querySelectorAll(".pncwiki-skill")[i] || sectionEl("performance");
+  }
+  if (path.startsWith("performance.engraving") || path === "sections.weapon") return byId(anchorByTitle("performance", "무장각인")) || sectionEl("performance");
+  if (path.startsWith("performance.review")) return byId(anchorByTitle("performance", "평가")) || sectionEl("performance");
+  if (head[0] === "algorithm") {
+    const zones = sectionEl("algorithm") ? sectionEl("algorithm").querySelectorAll(":scope > div") : [];
+    return zones[ALGORITHM_TYPES.indexOf(head[1])] || sectionEl("algorithm");
+  }
+  if (path.startsWith("intimacy.oath")) return previewEl.querySelector(".pncwiki-oath") || sectionEl("intimacy");
+  if (head[0] === "intimacy") return sectionEl("intimacy");
+  if (head[0] === "story") {
+    const i = GAME_DATA.storySlots.findIndex((slot) => slot.key === head[1]);
+    return previewEl.querySelectorAll(".pncwiki-story-slot")[i] || sectionEl("story");
+  }
+  if (head[0] === "history" || path === "sections.history") return sectionEl("history");
+  if (head[0] === "skin") return sectionEl("skin");
+  if (head[0] === "illustration" || head[0] === "expression") return byId(anchorByTitle("skin", "일러스트")) || sectionEl("skin");
+  if (head[0] === "relationship") return sectionEl("relationship");
+  if (head[0] === "voice") {
+    if (head[1] === "sets") return byId(anchorByTitle("voice", (getVoiceSets(state)[Number(head[2])] || {}).headingText)) || sectionEl("voice");
+    const slot = GAME_DATA.voiceSlots.find((s) => s.key === head[1]);
+    if (slot) {
+      const code = [...previewEl.querySelectorAll(".pncwiki-voice")][0];
+      const row = code && [...code.children].find((r) => r.textContent.includes(slot.code));
+      if (row) return row;
+    }
+    return sectionEl("voice");
+  }
+  if (head[0] === "etc") return sectionEl("etc");
+  return null;
+}
+
+// 페이지 첫 칸 기준 (탭으로 넘어갔을 때)
+function followPage() {
+  if (!isMobileLayout()) return;
+  const first = editorPanel.querySelector(".form-group:not(.is-off-page) [data-field], .form-group:not(.is-off-page) [data-image-url], .form-group:not(.is-off-page) [data-list-editor]");
+  const path = first ? first.dataset.field || first.dataset.imageUrl || first.dataset.listEditor : "";
+  editingTarget = path;
+  markEditing(true);
+}
+
+// 표시 + (필요하면) 그 위치로 미리보기 스크롤
+function markEditing(scroll) {
+  previewEl.querySelectorAll(".pncwiki-editing").forEach((el) => el.classList.remove("pncwiki-editing"));
+  if (!isMobileLayout() || !editingTarget) return;
+  const target = previewTargetFor(editingTarget);
+  if (!target) return;
+  target.classList.add("pncwiki-editing");
+  const top = target.getBoundingClientRect().top - previewPanel.getBoundingClientRect().top;
+  const inView = top >= 0 && top < previewPanel.clientHeight - 40;
+  if (scroll || !inView) previewPanel.scrollTo({ top: previewPanel.scrollTop + top - 12, behavior: scroll ? "smooth" : "auto" });
+}
+
+const TYPING_SELECTOR = 'input[type="text"], input:not([type]), textarea';
+
+editorPanel.addEventListener("focusin", (event) => {
+  const el = event.target;
+  if (!isMobileLayout()) return;
+  const path = el.dataset.field || el.dataset.imageUrl || "";
+  if (path) {
+    editingTarget = path;
+    markEditing(true);
+  }
+  if (el.matches(TYPING_SELECTOR)) document.body.classList.add("is-typing");
+});
+
+editorPanel.addEventListener("focusout", () => {
+  setTimeout(() => {
+    const active = document.activeElement;
+    if (!active || !active.matches || !active.matches(TYPING_SELECTOR) || !editorPanel.contains(active)) document.body.classList.remove("is-typing");
+  }, 50);
 });
 
 /* ---------- 화면 밝기 (밝게 / 중간 / 어둡게) ---------- */
