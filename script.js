@@ -557,7 +557,7 @@ function toSaveData() {
 }
 
 // 자동 저장은 글만: 직접 넣은 이미지(data:image/…)는 빼고 저장 (주소 이미지는 글이라 유지)
-// → 새로고침하면 직접 넣은 이미지는 다시 넣어야 함. JSON 저장에는 이미지까지 들어감
+// → 새로고침하면 직접 넣은 이미지는 다시 넣어야 함. 작업 저장(JSON)도 같은 규칙 (toJsonSaveData)
 function toAutosaveData() {
   return JSON.parse(
     JSON.stringify(toSaveData(), (key, value) => (typeof value === "string" && value.startsWith("data:image/") ? "" : value))
@@ -586,18 +586,40 @@ function loadFromLocalStorage() {
   }
 }
 
-function makeFileName() {
-  const name = state.profile.name.trim().replace(/[\\/:*?"<>|]/g, "") || "pnc_wiki";
+// 파일 이름 앞부분: 영문명 → 한글명 → PNC_WIKI (파일 이름에 못 쓰는 글자·공백 정리)
+function exportBaseName() {
+  const pick = [state.profile.names.en, state.profile.name].map((v) => String(v || "").trim()).find(Boolean) || "PNC_WIKI";
+  const clean = pick.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "").replace(/\s+/g, "_").replace(/^[.\s_]+|[.\s_]+$/g, "");
+  return clean.slice(0, 40) || "PNC_WIKI";
+}
+
+// 날짜 MMDD
+function exportDateTag() {
   const now = new Date();
-  const ymd =
-    now.getFullYear() +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0");
-  return `${name}_${ymd}.json`;
+  return String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
+}
+
+function makeFileName() {
+  return `${exportBaseName()}_${exportDateTag()}.json`;
+}
+
+// 작업 저장(JSON): 글·설정·이미지 주소는 전부, 직접 넣은 이미지(파일 그 자체)는 뺌 → 파일이 가볍고 어디서든 열림
+function toJsonSaveData() {
+  let removed = 0;
+  const data = JSON.parse(
+    JSON.stringify(toSaveData(), (key, value) => {
+      if (typeof value === "string" && value.startsWith("data:image/")) {
+        removed += 1;
+        return "";
+      }
+      return value;
+    })
+  );
+  return { ...data, images: "excluded", imagesRemoved: removed };
 }
 
 function downloadJson() {
-  const blob = new Blob([JSON.stringify(toSaveData(), null, 2)], {
+  const blob = new Blob([JSON.stringify(toJsonSaveData(), null, 2)], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
@@ -605,9 +627,12 @@ function downloadJson() {
   const a = document.createElement("a");
   a.href = url;
   a.download = makeFileName();
+  document.body.appendChild(a);
   a.click();
+  a.remove();
 
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return blob;
 }
 
 function loadJsonFile(file) {
@@ -616,10 +641,12 @@ function loadJsonFile(file) {
   const reader = new FileReader();
 
   reader.onload = (event) => {
+    let raw;
     let nextState;
 
     try {
-      nextState = normalizeData(JSON.parse(event.target.result));
+      raw = JSON.parse(event.target.result);
+      nextState = normalizeData(raw);
     } catch (error) {
       // 실패하면 현재 작업은 그대로 둔다
       alert(`불러오기 실패: ${error instanceof SyntaxError ? "올바른 JSON 파일이 아닙니다." : error.message}`);
@@ -628,6 +655,15 @@ function loadJsonFile(file) {
 
     state = nextState;
     refreshAll();
+
+    // 저장할 때 빠진 직접 넣은 이미지 개수 안내
+    const removed = Number(raw.imagesRemoved) || 0;
+    if (raw.images === "excluded" && removed > 0 && typeof showExportNotice === "function") {
+      showExportNotice("불러오기 완료", [
+        `<p>불러왔어요. 이 파일을 저장할 때 직접 넣은 이미지 <b>${removed}개</b>는 빠져 있었어요.</p>`,
+        "<p>비어 있는 이미지 칸에 다시 넣어 주세요. 이미지 주소로 넣은 칸은 그대로 들어 있어요.</p>",
+      ]);
+    }
   };
 
   reader.readAsText(file);
@@ -3174,7 +3210,6 @@ document.getElementById("resetButton").addEventListener("click", () => {
   refreshAll();
 });
 
-document.getElementById("saveJsonButton").addEventListener("click", downloadJson);
 
 /* ---------- 입력창 페이지 (위치 줄 · 이동 목록 · 이전/다음 · 작성 방식) ---------- */
 // 입력칸 묶음(.form-group)마다 index.html에 data-page 키가 있고, 여기서 파트·페이지로 묶어 한 페이지씩 보여 준다.
@@ -3220,12 +3255,17 @@ const EDITOR_PARTS = [
     key: "story",
     title: "스토리",
     fixed: "split",
+    pages: [{ key: "story", title: "스토리", slots: "story" }],
+  },
+  {
+    key: "history",
+    title: "작중 행적",
+    // 등장 스토리(메인/전속)를 고르면 작중 행적 항목이 그 아래로 묶임 → 같은 파트에
     pages: [
       { key: "story-type", title: "등장 스토리" },
-      { key: "story", title: "스토리", slots: "story" },
+      { key: "history", title: "작중 행적" },
     ],
   },
-  { key: "history", title: "작중 행적", pages: [{ key: "history", title: "작중 행적" }] },
   {
     key: "skin",
     title: "스킨",
@@ -3625,7 +3665,7 @@ document.getElementById("menuToggle").addEventListener("click", (event) => {
 });
 document.addEventListener("click", (event) => {
   if (!appHeader.classList.contains("is-menu-open")) return;
-  if (event.target.closest(".header-center, .theme-switch, .header-actions, #menuToggle")) return;
+  if (event.target.closest("#headerTools, #menuToggle, .export-backdrop")) return;
   appHeader.classList.remove("is-menu-open");
   document.getElementById("menuToggle").setAttribute("aria-expanded", "false");
 });

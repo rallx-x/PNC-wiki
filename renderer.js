@@ -106,6 +106,22 @@ function sectionAnchor(key) {
   return `pncwiki-s-${key}`;
 }
 
+/* ---------- 저장 단위 표식 (PNG · PDF) ---------- */
+// 저장 기능은 문서 안의 data-capture 표식만 모아서 찍는다 (문서 구조를 직접 뒤지지 않음)
+//   data-capture = 저장 단위 id / data-cap-part = 파일명 파트 번호 (생성기 상단 파트 순서, 고정)
+//   data-cap-name = 파일명 끝 이름 / data-capture-sub = 너무 길 때 나눠 찍는 하위 묶음
+const CAPTURE_PARTS = {
+  profile: "01", performance: "02", algorithm: "03", intimacy: "04", story: "05",
+  history: "06", skin: "07", relationship: "08", voice: "09", etc: "10",
+};
+
+function cap(id, partKey, name) {
+  return ` data-capture="${esc(id)}" data-cap-part="${CAPTURE_PARTS[partKey]}" data-cap-name="${esc(name)}"`;
+}
+
+// 그리기 방식: "" = 미리보기·티스토리 / "png" = 성장 상세(스킬 레벨별·각인강화 Lv.1~30) 빼고 / "pdf" = 전부
+let RENDER_MODE = "";
+
 /* ---------- 스타일 상수 ---------- */
 
 const C = {
@@ -703,7 +719,7 @@ function renderSkinItem(item, sub) {
   const quote = item.quote ? `<div style="${S.skinDescText}">${escMultiline(quoteText(item.quote))}</div>` : "";
   const descBox = desc || quote ? `<div style="${S.skinDesc}">${desc}${desc && quote ? `<div style="${S.skinDescRule}"></div>` : ""}${quote}</div>` : "";
   return `
-  <details class="pncwiki-skin" id="${sub.anchor}"${item.isBase ? "" : " open"} style="${S.skinFold}">
+  <details class="pncwiki-skin" id="${sub.anchor}"${item.isBase ? "" : " open"} style="${S.skinFold}"${cap(`skin-${sub.number}`, "skin", `스킨_${item.headingText}`)}>
     <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}${S.skinItemHeading}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${sub.number}.</span> ${heading}</summary>
     ${image}<div style="${S.skinTable}">${row("일러스트레이터", esc(item.illustrator), item.illustrator ? `color:${C.orange};` : "")}${row(
       "입수방법",
@@ -938,7 +954,7 @@ function renderSkillCard(card) {
   const cut = card.cutscene
     ? `<details class="pncwiki-skill-fold" style="${S.skillRow}display:block;"><summary style="${S.skillFoldTitle}text-align:left;">[ 궁극기 컷씬 ]</summary><div style="padding-top:8px;">${img(card.cutscene, "궁극기 컷씬", S.illImage)}</div></details>`
     : "";
-  const levels = card.levels.length
+  const levels = card.levels.length && RENDER_MODE !== "png" // PNG에서는 레벨별 상세 제외
     ? `<details class="pncwiki-skill-fold" style="display:block;border-top:1px solid ${C.infoLine};"><summary style="${S.skillFoldTitle}">[ 모든 레벨 효과 ]</summary><div style="${S.skillLevelTable}"><div style="${S.skillLevelHead}">레벨</div><div style="${S.skillLevelHead}">효과</div>${card.levels
         .map((line, i) => `<div style="${S.skillLevelNum}">${i + 1}</div><div style="${S.skillLevelText}">${line ? renderMarkup(line, true) : ""}</div>`)
         .join("")}</div></details>`
@@ -964,7 +980,7 @@ function renderPerformance(state, section) {
 
 function renderReview(state, node) {
   return `
-<details class="pncwiki-perf-group" id="${node.anchor}" open style="${S.skinFold}">
+<details class="pncwiki-perf-group" id="${node.anchor}" open style="${S.skinFold}"${cap("perf-review", "performance", "평가")}>
   ${foldHeading(node)}
   ${getReviewParagraphs(state).map((p) => `<div style="${S.reviewParagraph}">${renderMarkup(p, false)}</div>`).join("")}
 </details>`;
@@ -978,7 +994,7 @@ function renderPerformanceBasic(state, group) {
   if (stats) {
     const node = group.children[i++];
     parts.push(`
-  <details class="pncwiki-perf" id="${node.anchor}" open style="${S.skinFold}">
+  <details class="pncwiki-perf" id="${node.anchor}" open style="${S.skinFold}"${cap("perf-stats", "performance", "능력치")}>
     ${foldHeading(node)}
     ${renderStatTable(stats)}
   </details>`);
@@ -986,7 +1002,7 @@ function renderPerformanceBasic(state, group) {
   if (cards.length) {
     const node = group.children[i++];
     parts.push(`
-  <details class="pncwiki-perf" id="${node.anchor}" open style="${S.skinFold}">
+  <details class="pncwiki-perf" id="${node.anchor}" open style="${S.skinFold}"${cap("perf-skill", "performance", "스킬")}>
     ${foldHeading(node)}
     ${cards.map(renderSkillCard).join("")}
   </details>`);
@@ -1068,7 +1084,7 @@ function renderEngravingTable(totals) {
   return `
 <div class="pncwiki-engrave-table" style="${S.engraveWrap}"><div style="${S.engraveBox}">
   <div style="${grid}"><div style="${S.engraveHead}">Lv.</div>${heads}${row(GAME_DATA.engravingMaxLevel, S.engraveMax)}</div>
-  <details class="pncwiki-engrave-fold" style="display:block;border-top:1px solid ${C.cardBorder};"><summary style="${S.skillFoldTitle}">[ Lv.1 ~ ${GAME_DATA.engravingMaxLevel} 전체 보기 ]</summary><div style="${grid}border-top:1px solid ${C.infoLine};">${all}</div></details>
+  ${RENDER_MODE === "png" ? "" : `<details class="pncwiki-engrave-fold" style="display:block;border-top:1px solid ${C.cardBorder};"><summary style="${S.skillFoldTitle}">[ Lv.1 ~ ${GAME_DATA.engravingMaxLevel} 전체 보기 ]</summary><div style="${grid}border-top:1px solid ${C.infoLine};">${all}</div></details>`}
 </div></div>`;
 }
 
@@ -1098,7 +1114,7 @@ function renderEngraving(state, group) {
   </details>`);
   }
   return `
-<details class="pncwiki-perf-group" id="${group.anchor}" open style="${S.skinFold}">
+<details class="pncwiki-perf-group" id="${group.anchor}" open style="${S.skinFold}"${cap("perf-engraving", "performance", "무장각인")}>
   ${foldHeading(group)}
   ${card}${parts.join("")}
 </details>`;
@@ -1188,7 +1204,7 @@ function renderIllustration(state, node) {
       if (part.key === "cg") {
         inner = part.groups
           .map((group, j) => `
-    <details class="pncwiki-ill" id="${sub.children[j].anchor}" open style="${S.skinFold}">
+    <details class="pncwiki-ill" id="${sub.children[j].anchor}" open style="${S.skinFold}"${cap(`ill-cg-${j}`, "skin", `일러스트_${group.title}CG`)}>
       ${foldHeading(sub.children[j])}
       ${renderTitledImages(group.items)}
     </details>`)
@@ -1198,14 +1214,16 @@ function renderIllustration(state, node) {
         inner = part.expressions
           .map(
             (group) =>
-              `${bulletTitle(group.title)}<div style="${S.exprGrid}">${group.images
+              `<div data-capture-sub="${esc(group.title || "감정표현")}">${bulletTitle(group.title)}<div style="${S.exprGrid}">${group.images
                 .map((src) => `<div style="${S.exprCell}border-color:${tone};">${img(src, group.title, S.exprImage)}</div>`)
-                .join("")}</div>`
+                .join("")}</div></div>`
           )
           .join("");
       }
+      // 스탠딩·감정 표현은 그 하위 문단이 저장 단위, 일러스트 CG는 안쪽 묶음(메인/전속·일반)이 단위
+      const capAttr = part.key === "cg" ? "" : cap(`ill-${part.key}`, "skin", part.key === "standing" ? "일러스트_스탠딩CG" : "일러스트_감정표현");
       return `
-  <details class="pncwiki-ill" id="${sub.anchor}" open style="${S.skinFold}">
+  <details class="pncwiki-ill" id="${sub.anchor}" open style="${S.skinFold}"${capAttr}>
     ${foldHeading(sub)}
     ${inner}
   </details>`;
@@ -1327,7 +1345,7 @@ function renderVoiceSet(set, sub, tone) {
 </div>`
     : "";
   return `
-<details class="pncwiki-voice-set" id="${sub.anchor}" style="${S.skinFold}">
+<details class="pncwiki-voice-set" id="${sub.anchor}" style="${S.skinFold}"${cap(`voice-set-${sub.number}`, "voice", `대사_스킨보이스-${set.name || "세트"}`)}>
   <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span><span style="${S.headingNumber}">${sub.number}.</span> ${esc(set.headingText)}</summary>
   ${desc}${table}
 </details>`;
@@ -1345,7 +1363,7 @@ function renderBaseVoice(state, tone) {
     .map((slot) => renderVoiceRow(slot.label, slot.code, slot.fixed || (typeof voice[slot.key] === "string" ? voice[slot.key].trim() : "")))
     .join("");
   return `
-<div class="pncwiki-voice" style="${S.voice}margin-bottom:28px;">
+<div class="pncwiki-voice" style="${S.voice}margin-bottom:28px;"${cap("voice-base", "voice", "대사_기본보이스")}>
   <div style="${S.voiceHead}background:${tone};">기본 보이스</div>${rows}
 </div>`;
 }
@@ -1644,22 +1662,37 @@ function renderOath(state) {
 </div>`;
 }
 
+// 문단 하나가 그대로 저장 단위인 문단 (내용이 있을 때만)
+const SECTION_CAPTURE = {
+  algorithm: "추천알고리즘", intimacy: "친밀도", story: "스토리", history: "작중행적", relationship: "인형관계", etc: "기타",
+};
+
 function renderSection(state, section) {
   const body = SECTION_BODY[section.key] ? SECTION_BODY[section.key](state, section) : "";
+  const capAttr = SECTION_CAPTURE[section.key] && body.trim() ? cap(section.key, section.key, SECTION_CAPTURE[section.key]) : "";
   return part(
     section.key,
-    `<details class="pncwiki-section" id="${sectionAnchor(section.key)}" open style="${S.section}display:block;">${renderHeading(section)}${body}</details>`
+    `<details class="pncwiki-section" id="${sectionAnchor(section.key)}" open style="${S.section}display:block;"${capAttr}>${renderHeading(section)}${body}</details>`
   );
 }
 
 /* ---------- 문서 전체 ---------- */
 
-function renderDocument(state) {
+function renderDocument(state, options = {}) {
+  RENDER_MODE = options.capture || "";
+  try {
+    return renderDocumentBody(state);
+  } finally {
+    RENDER_MODE = "";
+  }
+}
+
+function renderDocumentBody(state) {
   const sections = getActiveSections(state);
 
   return `<div class="pncwiki-doc" style="${S.root}">${FOLD_STYLE}
-${part("top", renderTopCard(state))}
-${part("info", renderInfo(state))}
+<div class="pncwiki-cover"${cap("profile", "profile", "프로필")}>${part("top", renderTopCard(state))}
+${part("info", renderInfo(state))}</div>
 ${part("toc", renderToc(sections))}
 ${sections.map((section) => renderSection(state, section)).join("\n")}
 </div>`;

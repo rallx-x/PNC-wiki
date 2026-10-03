@@ -23,25 +23,37 @@
                 <span>티스토리용 위키 HTML</span>
             </div>
 
-            <!-- 작성 방식: 한 번에 쓰기 = 파트 하나가 한 페이지 / 하나씩 쓰기 = 항목 하나가 한 페이지 -->
-            <div class="header-center" id="headerCenter">
-                <div class="mode-switch" role="group" aria-label="작성 방식">
-                    <button type="button" data-write-mode="all">한 번에 쓰기</button>
-                    <button type="button" data-write-mode="split">하나씩 쓰기</button>
+            <!-- PC: 줄 안에 그대로 / 폰·패드: ☰ 메뉴 판 -->
+            <div class="header-tools" id="headerTools">
+                <!-- 작성 방식: 한 번에 쓰기 = 파트 하나가 한 페이지 / 하나씩 쓰기 = 항목 하나가 한 페이지 -->
+                <div class="header-center" id="headerCenter">
+                    <div class="mode-switch" role="group" aria-label="작성 방식">
+                        <button type="button" data-write-mode="all">한 번에 쓰기</button>
+                        <button type="button" data-write-mode="split">하나씩 쓰기</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="theme-switch" role="group" aria-label="화면 밝기">
-                <button type="button" data-theme-choice="light" title="밝게" aria-label="밝게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg></button>
-                <button type="button" data-theme-choice="mid" title="중간" aria-label="중간"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
-                <button type="button" data-theme-choice="dark" title="어둡게" aria-label="어둡게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="currentColor"/></svg></button>
-            </div>
+                <div class="theme-switch" role="group" aria-label="화면 밝기">
+                    <button type="button" data-theme-choice="light" title="밝게" aria-label="밝게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg></button>
+                    <button type="button" data-theme-choice="mid" title="중간" aria-label="중간"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+                    <button type="button" data-theme-choice="dark" title="어둡게" aria-label="어둡게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="currentColor"/></svg></button>
+                </div>
 
-            <div class="header-actions">
-                <button type="button" class="header-button primary" id="saveJsonButton">JSON 저장</button>
-                <label class="header-button file-button" for="loadJsonInput">불러오기</label>
-                <input id="loadJsonInput" type="file" accept=".json" hidden />
-                <button type="button" class="header-button danger" id="resetButton">초기화</button>
+                <div class="header-actions">
+                    <button type="button" class="header-button danger" id="resetButton">초기화</button>
+                    <button type="button" class="header-button" id="loadJsonButton">불러오기</button>
+                    <input id="loadJsonInput" type="file" accept=".json,application/json" hidden />
+                    <div class="save-menu" id="saveMenu">
+                        <button type="button" class="header-button primary save-toggle" id="saveMenuToggle" aria-haspopup="true" aria-expanded="false">저장 <span class="save-caret" aria-hidden="true"></span></button>
+                        <div class="save-list" id="saveList" role="menu">
+                            <button type="button" role="menuitem" data-export="html">티스토리 HTML 복사</button>
+                            <button type="button" role="menuitem" data-export="json">작업 저장 <small>JSON</small></button>
+                            <button type="button" role="menuitem" data-export="png">이미지 저장 <small>PNG</small></button>
+                            <button type="button" role="menuitem" data-export="pdf">PDF 저장</button>
+                            <button type="button" role="menuitem" data-export="xlsx">엑셀 저장 <small>XLSX</small></button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 폰·패드: 위 버튼들을 이 메뉴 하나로 모음 -->
@@ -547,6 +559,9 @@
     <script src="./data/engraving-db.js"></script>
     <script src="./renderer.js"></script>
     <script src="./script.js"></script>
+    <script src="./export.js"></script>
+    <script src="./xlsx.js"></script>
+    <script src="./excel.js"></script>
 </body>
 
 </html>

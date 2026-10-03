@@ -192,6 +192,78 @@ body {
   color: var(--danger);
 }
 
+.header-tools {
+  display: contents;
+}
+
+/* 저장 ▾ */
+.save-menu {
+  position: relative;
+}
+
+.save-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  border-top: 5px solid currentColor;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.save-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 45;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.save-menu.is-open .save-list {
+  display: flex;
+}
+
+.save-list button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.save-list button:hover,
+.save-list button:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.save-list small {
+  color: var(--sub-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.save-list button:first-child {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 7px 7px 0 0;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 420px 1fr;
@@ -1683,10 +1755,8 @@ button.page-nav-item:hover {
     display: none;
   }
 
-  /* 상단 버튼들 → ☰ 메뉴 안으로 */
-  .header-center,
-  .theme-switch,
-  .header-actions {
+  /* 상단 버튼들 → ☰ 메뉴 판 안으로 */
+  .header-tools {
     display: none;
   }
 
@@ -1711,69 +1781,91 @@ button.page-nav-item:hover {
     background: var(--text);
   }
 
-  .app-header.is-menu-open .header-center,
-  .app-header.is-menu-open .theme-switch,
-  .app-header.is-menu-open .header-actions {
+  .app-header.is-menu-open .header-tools {
     display: flex;
-    position: absolute;
-    right: 8px;
-    z-index: 40;
-    justify-content: flex-start;
-  }
-
-  .app-header.is-menu-open::after {
-    content: "";
+    flex-direction: column;
+    gap: 10px;
     position: absolute;
     top: 52px;
     right: 8px;
-    z-index: 39;
+    z-index: 40;
     width: 260px;
-    height: 168px;
+    max-height: calc(var(--app-h, 100dvh) - 64px);
+    overflow-y: auto;
+    padding: 12px;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--panel);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
   }
 
-  .app-header.is-menu-open .header-center {
-    top: 64px;
-    width: 236px;
-    margin-right: 12px;
-  }
-
-  .app-header.is-menu-open .mode-switch {
+  .header-tools .header-center,
+  .header-tools .mode-switch {
     width: 100%;
   }
 
-  .app-header.is-menu-open .mode-switch button {
+  .header-tools .mode-switch button {
     flex: 1;
     padding: 8px 6px;
   }
 
-  .app-header.is-menu-open .theme-switch {
-    top: 112px;
-    width: 236px;
-    margin-right: 12px;
+  .header-tools .theme-switch {
     justify-content: space-between;
   }
 
-  .app-header.is-menu-open .theme-switch button {
+  .header-tools .theme-switch button {
     flex: 1;
     height: 34px;
   }
 
-  .app-header.is-menu-open .header-actions {
-    top: 160px;
-    width: 236px;
-    margin-right: 12px;
+  /* 메뉴 판: 저장 항목을 펼친 목록으로, 그 아래 불러오기·초기화 */
+  .header-tools .header-actions {
+    flex-direction: column;
+    align-items: stretch;
     gap: 6px;
   }
 
-  .app-header.is-menu-open .header-button {
-    flex: 1 1 auto;
+  .header-tools .save-menu {
+    order: -1;
+  }
+
+  .header-tools .save-toggle {
+    display: none;
+  }
+
+  .header-tools #resetButton {
+    order: 3;
+  }
+
+  .header-tools .save-list {
+    display: flex;
+    position: static;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    gap: 6px;
+  }
+
+  .header-tools .save-list button {
     justify-content: center;
-    padding: 9px 6px;
-    font-size: 12px;
+    padding: 10px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .header-tools .save-list button:first-child {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .header-tools .header-button {
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 13px;
     white-space: nowrap;
   }
 
@@ -1929,4 +2021,184 @@ button.page-nav-item:hover {
     outline-offset: 3px;
     border-radius: 2px;
   }
+}
+
+/* =========================================================
+   저장 창 (이미지 고르기 · 진행 · 결과 · 안내) + 짧은 알림
+   ========================================================= */
+.export-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 100%);
+  max-height: calc(var(--app-h, 100dvh) - 32px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+
+.export-dialog h2 {
+  padding: 16px 18px 0;
+  font-size: 16px;
+}
+
+.export-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 18px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.export-body p + p,
+.export-body p + .export-note,
+.export-note + p {
+  margin-top: 8px;
+}
+
+.export-note {
+  padding: 9px 11px;
+  border: 1px solid var(--warn-line);
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.export-note + .export-note {
+  margin-top: 6px;
+}
+
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.export-actions .header-button {
+  justify-content: center;
+  min-width: 72px;
+}
+
+.export-scope {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.export-scope label {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 999px;
+  color: var(--sub-text);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.export-scope input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.export-scope label:has(input:checked) {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.export-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.export-tree[hidden] {
+  display: none;
+}
+
+.export-part {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-soft);
+}
+
+.export-part > label {
+  font-weight: 700;
+}
+
+.export-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 2px 22px;
+}
+
+.export-tree label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.export-tree input {
+  accent-color: var(--accent);
+}
+
+.export-count {
+  margin-top: 10px;
+  color: var(--sub-text);
+  font-size: 12px;
+}
+
+.export-progress {
+  height: 8px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.export-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.export-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 110;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--panel);
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
