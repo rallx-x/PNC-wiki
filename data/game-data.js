@@ -25,7 +25,7 @@ const GAME_DATA = {
     cybermedia: { label: "사이버미디어", color: "#601986", icon: "company/cybermedia.png" },
     sanctifier: { label: "정화자", color: "#0b1016", icon: "company/sanctifier.png" },
     entropics: { label: "엔트로피", color: "#7640ca", icon: "company/entropics.png" },
-    alternatives: { label: "특수", color: "#726e6d", icon: "company/alternatives.png" },
+    alternatives: { label: "특수", color: "#726e6d", icon: "company/alternatives.png", toneFrom: "42lab" }, // 대사 표 색은 42LAB과 통일
   },
 
   class: {
@@ -253,7 +253,7 @@ const GAME_DATA = {
     { key: "midnight", label: "밤 인사", code: "MIDNIGHT" },
     { key: "dialogue1", label: "메인화면 대사 1", code: "DIALOGUE1" },
     { key: "dialogue2", label: "메인화면 대사 2", code: "DIALOGUE2" },
-    { key: "dialogue4", label: "메인화면 대사 3", code: "DIALOGUE4" }, // 원본 코드 그대로 (DIALOGUE3 아님)
+    { key: "dialogue4", label: "메인화면 대사 3", code: "DIALOGUE3" }, // 저장 키는 예전 그대로 dialogue4 (저장 파일 호환), 문서 코드는 DIALOGUE3
     { key: "interact1", label: "대화 1", code: "INTERACT1" },
     { key: "interact2", label: "대화 2", code: "INTERACT2" },
     { key: "interact3", label: "대화 3", code: "INTERACT3" },
@@ -266,8 +266,24 @@ const GAME_DATA = {
     { key: "mvp1", label: "MVP 1", code: "MVP1" },
     { key: "mvp2", label: "MVP 2", code: "MVP2" },
     { key: "retreat", label: "쓰러짐", code: "RETREAT" },
+    // 서약 후 해금되는 기념일 대사
+    { key: "newyear", label: "새해", code: "NEWYEAR" },
+    { key: "valentine", label: "발렌타인", code: "VALENTINE" },
+    { key: "tanabata", label: "칠석", code: "TANABATA" },
+    { key: "allhallows", label: "핼러윈", code: "ALLHALLOWS" },
+    { key: "christmas", label: "크리스마스", code: "CHRISTMAS" },
+    { key: "playerbirthday", label: "생일 축하", code: "PLAYERBIRTHDAY" },
     { key: "oath", label: "서약", code: "OATH" },
-    { key: "title", label: "타이틀 콜", code: "TITLE" },
+    { key: "title", label: "타이틀 콜", code: "TITLE", fixed: "뉴럴 클라우드" }, // 모든 인형 같은 글 → 입력칸 없음
+  ],
+  // 대사 입력 묶음 (하나씩 쓰기에서 한 페이지씩). 고정 대사(타이틀 콜)는 입력하지 않음
+  voiceGroups: [
+    { key: "greet", label: "시간대 인사", slots: ["morning", "afternoon", "evening", "midnight"] },
+    { key: "main", label: "메인화면 대사", slots: ["dialogue1", "dialogue2", "dialogue4"] },
+    { key: "interact", label: "대화", slots: ["interact1", "interact2", "interact3"] },
+    { key: "growth", label: "획득 · 재능 돌파 · 마인드 확장", slots: ["gain", "levelup", "rankup"] },
+    { key: "battle", label: "부대 편입 · 전투", slots: ["formation", "battle", "skill", "mvp1", "mvp2", "retreat"] },
+    { key: "oath", label: "서약 · 기념일", slots: ["newyear", "valentine", "tanabata", "allhallows", "christmas", "playerbirthday", "oath"] },
   ],
 
   // 친밀도 서약 칭호 고정 이미지 (사용자가 올리는 이미지 아님)
@@ -279,14 +295,146 @@ const GAME_DATA = {
   // 스킨 적용범위 (복수 선택). 캐릭터 JSON에는 key 배열만 저장
   skinEffect: {
     model3d: { label: "3D모델", desc: "SD가 변경됨", color: "#00e5ff", text: "#111111" },
-    live2d: { label: "Live2D", desc: "Live2D가 추가됨", color: "#ffc800", text: "#111111" },
-    animated: { label: "Animated", desc: "움직임있는 일러스트가 추가됨", color: "#ffb300", text: "#111111" },
+    // titleTag: 고르면 스킨 제목 뒤에 " (Live2D)"처럼 붙음 / excludes: 같이 고를 수 없는 항목
+    live2d: { label: "Live2D", desc: "Live2D가 추가됨", color: "#ffc800", text: "#111111", titleTag: true, excludes: ["animated"] },
+    animated: { label: "Animated", desc: "움직임있는 일러스트가 추가됨", color: "#ffb300", text: "#111111", titleTag: true, excludes: ["live2d"] },
     cutin: { label: "Cut-in", desc: "궁극기 컷씬이 변경됨", color: "#ff4b12", text: "#111111" },
     voice: { label: "보이스", desc: "보이스 세트가 추가됨", color: "#d9a8ff", text: "#111111" },
   },
 
-  // 스킨 투영 종류 입력 추천 (선택지 제한 아님 — 자유 입력)
-  skinTypeExamples: ["기본 투영", "확장 투영", "완벽 투영", "스킨 테마"],
+  // 기본 스킨 고정 3칸 (문서 순서). 입수방법·설명은 고정 글이라 저장 안 함
+  // 이미지는 문서 맨 위 프로필 카드 3칸과 같이 씀
+  skinBase: [
+    { key: "basic", label: "기본 투영", acquisition: "기본 투영", description: "인형이 마그라세아에 들어온 후 마인드맵으로 투영한 의상입니다. 가장 익숙하면서도 편안하죠." },
+    { key: "extended", label: "확장 투영", acquisition: "마인드 확장 ★★★☆ 달성", description: "인형이 마그라세아에 들어온 후 마인드맵으로 투영한 의상입니다. 가장 익숙하면서도 편안하죠." },
+    { key: "perfect", label: "완벽 투영", acquisition: "마인드 확장 ★★★★ 달성", description: "마그라세아에 들어온 인형의 마인드맵으로 투영한 의상과 환경으로, 현실 세계에서의 삶을 비춥니다." },
+  ],
+
+  // 스킨 보이스 세트 고정 17칸 (문서 순서). dialogue: 메인화면 대사 번호 (세트마다 1~3칸 +/−)
+  skinVoiceSlots: [
+    { key: "morning", label: "아침 인사", code: "MORNING" },
+    { key: "afternoon", label: "낮 인사", code: "AFTERNOON" },
+    { key: "evening", label: "저녁 인사", code: "EVENING" },
+    { key: "midnight", label: "밤 인사", code: "MIDNIGHT" },
+    { key: "dialogue1", label: "메인화면 대사 1", code: "DIALOGUE1", dialogue: 1 },
+    { key: "dialogue2", label: "메인화면 대사 2", code: "DIALOGUE2", dialogue: 2 },
+    { key: "dialogue3", label: "메인화면 대사 3", code: "DIALOGUE3", dialogue: 3 },
+    { key: "interact1", label: "대화 1", code: "INTERACT1" },
+    { key: "interact2", label: "대화 2", code: "INTERACT2" },
+    { key: "interact3", label: "대화 3", code: "INTERACT3" },
+    { key: "gain", label: "획득", code: "GAIN" },
+    { key: "formation", label: "부대 편입", code: "FORMATION" },
+    { key: "battle", label: "전투 시작", code: "BATTLE" },
+    { key: "skill", label: "궁극기", code: "SKILL" },
+    { key: "mvp1", label: "MVP 1", code: "MVP1" },
+    { key: "mvp2", label: "MVP 2", code: "MVP2" },
+    { key: "retreat", label: "쓰러짐", code: "RETREAT" },
+  ],
+  skinVoiceDialogueMax: 3,
+
+  // 등장 스토리 (캐릭터마다 하나만): 작중 행적·일러스트 CG 분류 이름
+  storyType: {
+    main: { label: "메인 스토리", short: "메인" },
+    exclusive: { label: "전속 스토리", short: "전속" },
+  },
+
+  // 스킬 3종 (문서 순서). levels = 레벨 효과 줄 수
+  skillSlots: [
+    { key: "passive", label: "패시브", color: "#4a4a4a", levels: 10 },
+    { key: "auto", label: "자동", color: "#1e88e5", levels: 10, cooldown: true, precharge: true },
+    { key: "ultimate", label: "궁극기", color: "#f57c00", levels: 5, fixedCooldown: 30, cutscene: true },
+  ],
+
+  // 고유명사 색 분류 (흰 배경에서 읽기 좋게 조금 진하게)
+  termColor: {
+    physical: { label: "물리", color: "#d9363e" },
+    arithmetic: { label: "연산", color: "#1971c2" },
+    buff: { label: "버프", color: "#2b8a3e" },
+    neutral: { label: "물리도 연산도 아님", color: "#b08900" },
+    cc: { label: "상태이상(CC)", color: "#e8590c" },
+    unique: { label: "캐릭터 스킬 고유명사", color: "#7048e8" },
+    unknown: { label: "사전에 없는 단어", color: "#c2417a" },
+  },
+  // 고유명사 사전: 단어 → 분류. 스킬 글에서는 별표 없이 적어도 자동으로 색이 들어감
+  termDictionary: {
+    물리피해: "physical",
+    연산피해: "arithmetic",
+    은신: "buff",
+    치료: "buff",
+    재생: "buff",
+    슈퍼아머: "buff",
+    보호막: "buff",
+    점멸: "buff",
+    순수피해: "neutral",
+    고정피해: "neutral",
+    감속: "cc",
+    기절: "cc",
+    도발: "cc",
+    띄움: "cc",
+    밀어냄: "cc",
+    연소: "cc",
+    제어: "cc",
+    무장해제: "cc",
+    "대응 속성": "unique",
+    "여명의 가호": "unique",
+    "청명한 새벽": "unique",
+  },
+  // 표기법 [글자]{색} · *단어|색* 에 쓰는 색 이름
+  namedColor: {
+    빨강: "#d9363e",
+    파랑: "#1971c2",
+    초록: "#2b8a3e",
+    노랑: "#b08900",
+    주황: "#e8590c",
+    보라: "#7048e8",
+    분홍: "#c2417a",
+    회색: "#868e96",
+  },
+
+  // 능력치 표 줄 (문서 순서). key = attribute 키, label은 Raw DB 이름과 같음
+  //   group: attack·pen·tank(성장형, 단계별 중앙값) / pick(비성장형, 실제 인형 1명) / fixed(모든 인형 같은 기본값 value)
+  //   unit: "%"면 문서에 % 붙임
+  statRows: [
+    { key: "max-hp", group: "tank" },
+    { key: "atk", group: "attack" },
+    { key: "hashrate", group: "attack" },
+    { key: "physical-def", group: "tank" },
+    { key: "operand-def", group: "tank" },
+    { key: "attack-speed", group: "pick" },
+    { key: "crit-rate", group: "pick", unit: "%" },
+    { key: "crit-damage", group: "fixed", value: "50", unit: "%" }, // 기본 50% 고정 (알고리즘 부옵션으로만 달라짐)
+    { key: "physical-penetration", group: "pen" },
+    { key: "operand-penetration", group: "pen" },
+    { key: "dodge-rate", group: "pick", unit: "%" },
+    { key: "post-battle-hp", group: "pick" },
+  ],
+  // 능력치 단계: init = 최초 성급 1레벨 (profile.rarity), s60·s70 = 5성 60·70레벨
+  statStages: [
+    { key: "init", raw: "초기1레벨" },
+    { key: "s60", raw: "5성60레벨", label: "5성 60레벨" },
+    { key: "s70", raw: "5성70레벨", label: "5성 70레벨" },
+  ],
+  // 자동생성 공식 (자몽·체리 합의): 공격 ±12%, 비주력 1/3, 비주력 상한 0.9, 쌍두 차이 ≤4%, 체력·방어 ±10%
+  statRule: { W: 0.12, offRatio: 1 / 3, offCap: 0.9, twinGap: 0.04, tankW: 0.1 },
+
+  // 무장각인 > 각인강화: 공식 인형 43명 공통 성장곡선 (Raw 분석, 자몽·체리 합의)
+  //   rows  = 표 열 순서 (attribute 키). steps = 그 능력치가 오르는 레벨 9개 (전원 공통)
+  //   frac  = 9번째(=Lv.30 총량) 대비 누적 비율. Lv 값 = round(총량 × frac[지금까지 오른 횟수-1])
+  engravingRows: ["max-hp", "atk", "hashrate", "physical-def", "operand-def", "physical-penetration", "operand-penetration"],
+  engravingSteps: {
+    "max-hp": [4, 7, 10, 14, 17, 20, 24, 27, 30],
+    atk: [3, 6, 9, 13, 16, 19, 23, 26, 29],
+    hashrate: [3, 6, 9, 13, 16, 19, 23, 26, 29],
+    "physical-def": [1, 4, 10, 11, 14, 20, 21, 24, 30],
+    "operand-def": [1, 7, 10, 11, 17, 20, 21, 27, 30],
+    "physical-penetration": [2, 5, 8, 12, 15, 18, 22, 25, 28],
+    "operand-penetration": [2, 5, 8, 12, 15, 18, 22, 25, 28],
+  },
+  engravingFrac: [0.0891, 0.1784, 0.2744, 0.3771, 0.4864, 0.6025, 0.725, 0.8544, 1],
+  engravingMaxLevel: 30,
+  // 각인돌파 단계 (I·II·III 고정) · 대상 스킬 (skillSlots 3종 + 기타)
+  breakthroughStages: ["I", "II", "III"],
+  breakthroughEtc: { key: "etc", label: "기타", color: "#868e96" },
 
   ui: {},
 };

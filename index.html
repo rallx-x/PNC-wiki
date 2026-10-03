@@ -6,47 +6,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>뉴럴 클라우드 인형 위키 HTML 생성기</title>
     <link rel="stylesheet" href="./style.css" />
+    <script>
+        // 화면 밝기: 그리기 전에 먼저 적용 (깜빡임 방지). 이 브라우저에만 기억
+        try {
+            const theme = localStorage.getItem("pnc_wiki_theme");
+            if (theme === "mid" || theme === "dark") document.documentElement.dataset.theme = theme;
+        } catch (e) {}
+    </script>
 </head>
 
 <body>
     <div class="app">
         <header class="app-header">
-            <div>
-                <h1>뉴럴 클라우드 인형 위키 HTML 생성기</h1>
-                <p>정보를 입력하면 티스토리용 위키 HTML을 생성합니다.</p>
+            <div class="app-title">
+                <h1>뉴럴 클라우드 인형 위키 생성기</h1>
+                <span>티스토리용 위키 HTML</span>
+            </div>
+
+            <!-- 작성 방식: 한 번에 쓰기 = 파트 하나가 한 페이지 / 하나씩 쓰기 = 항목 하나가 한 페이지 -->
+            <div class="header-center" id="headerCenter">
+                <div class="mode-switch" role="group" aria-label="작성 방식">
+                    <button type="button" data-write-mode="all">한 번에 쓰기</button>
+                    <button type="button" data-write-mode="split">하나씩 쓰기</button>
+                </div>
+            </div>
+
+            <div class="theme-switch" role="group" aria-label="화면 밝기">
+                <button type="button" data-theme-choice="light" title="밝게" aria-label="밝게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg></button>
+                <button type="button" data-theme-choice="mid" title="중간" aria-label="중간"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+                <button type="button" data-theme-choice="dark" title="어둡게" aria-label="어둡게"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="currentColor"/></svg></button>
             </div>
 
             <div class="header-actions">
-                <button type="button" class="header-button" id="saveJsonButton">
-                    JSON 저장
-                </button>
-
-                <label class="header-button file-button" for="loadJsonInput">
-                    JSON 불러오기
-                </label>
+                <button type="button" class="header-button primary" id="saveJsonButton">JSON 저장</button>
+                <label class="header-button file-button" for="loadJsonInput">불러오기</label>
                 <input id="loadJsonInput" type="file" accept=".json" hidden />
-
-                <button type="button" class="header-button danger" id="resetButton">
-                    초기화
-                </button>
+                <button type="button" class="header-button danger" id="resetButton">초기화</button>
             </div>
         </header>
 
         <main class="workspace">
             <section class="editor-panel" id="editorPanel">
-                <div class="panel-header">
-                    <h2>입력</h2>
-                    <span>Phase 1</span>
+                <!-- 지금 쓰는 곳 + 눌러서 펼치면 이동 목록 (script.js가 채움) -->
+                <details class="page-nav" id="pageNav">
+                    <summary class="page-loc">
+                        <span class="page-loc-arrow" aria-hidden="true">▸</span>
+                        <span class="page-loc-part" id="pageLocPart"></span>
+                        <span class="page-loc-sep" id="pageLocSep" aria-hidden="true">›</span>
+                        <span class="page-loc-title" id="pageLocTitle"></span>
+                        <span class="page-loc-count" id="pageLocCount"></span>
+                    </summary>
+                    <div class="page-nav-list" id="pageNavList"></div>
+                </details>
+                <div class="page-step" data-page-step="top"></div>
+
+                <div class="autosave-warning" id="autosaveWarning" hidden>
+                    자동 저장 공간이 꽉 찼어요 (직접 넣은 이미지가 많을 때 생겨요). 작업 내용은 「JSON 저장」으로 꼭 저장해 주세요.
                 </div>
 
                 <div class="form-section-title">프로필</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollName">이름</label>
                     <input id="dollName" type="text" data-field="profile.name" />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollNameCn">중국어명</label>
                     <input id="dollNameCn" type="text" data-field="profile.names.cn" />
 
@@ -57,17 +82,17 @@
                     <input id="dollNameEn" type="text" data-field="profile.names.en" />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollJob">직업</label>
                     <input id="dollJob" type="text" data-field="profile.job" />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollModel">모델</label>
                     <input id="dollModel" type="text" data-field="profile.model" />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label>기업</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
@@ -117,7 +142,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label>클래스</label>
                     <div class="checkbox-grid radio-grid">
                         <label>
@@ -152,14 +177,14 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label>포지션 (최대 2개)</label>
                     <!-- 체크박스는 GAME_DATA.position으로 자동 생성. 여러 개 선택, 고른 순서대로 표시 -->
                     <div class="gift-summary" id="positionSummary"></div>
                     <div class="checkbox-grid radio-grid" id="positionPicker"></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label>레어도</label>
                     <div class="checkbox-grid radio-grid rarity-grid">
                         <label>
@@ -184,7 +209,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label>생일</label>
 
                     <div class="birthday-select-row">
@@ -216,7 +241,7 @@
                     </label>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollVoiceName">성우</label>
                     <input id="dollVoiceName" type="text" data-field="profile.voiceActor.name" />
 
@@ -225,50 +250,141 @@
                     <div class="checkbox-grid radio-grid" data-options="country" data-options-field="profile.voiceActor.country"></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollIllustrator">일러스트</label>
                     <input id="dollIllustrator" type="text" data-field="profile.illustrator" />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollHistory">이력</label>
                     <textarea id="dollHistory" rows="4" data-field="profile.history"></textarea>
                 </div>
 
+                <div class="form-group" data-page="profile">
+                    <label>등장 스토리</label>
+                    <div class="checkbox-grid radio-grid">
+                        <label>
+                            <input type="radio" name="profile.storyType" data-field="profile.storyType" value="" />
+                            선택 안 함
+                        </label>
+
+                        <label>
+                            <input type="radio" name="profile.storyType" data-field="profile.storyType" value="main" />
+                            메인 스토리
+                        </label>
+
+                        <label>
+                            <input type="radio" name="profile.storyType" data-field="profile.storyType" value="exclusive" />
+                            전속 스토리
+                        </label>
+                    </div>
+                    <div class="list-hint">고르면 작중 행적 항목이 「메인 스토리」 또는 「전속 스토리」 아래로 묶여요. 둘 다 아니면 「선택 안 함」.</div>
+                </div>
+
                 <div class="form-section-title">개요</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="profile">
                     <label for="dollQuote">인용문</label>
                     <textarea id="dollQuote" rows="4" data-field="overview.quote"></textarea>
                 </div>
 
+                <div class="form-section-title">성능</div>
+
+                <div class="form-group" data-page="perf-skill">
+                    <details class="markup-guide">
+                        <summary>글 꾸미기 · 레벨 자동 적용 안내 (스킬·평가 칸에서 쓸 수 있어요)</summary>
+                        <div class="markup-guide-body">
+                            <b>레벨 효과 자동 적용</b>
+                            <p>1레벨 효과만 쓰고, 레벨마다 바뀌는 숫자를 중괄호 <code>{ }</code> 안에 숫자나 범위로 적으면 레벨에 따라 자동으로 들어가요. 바뀌는 숫자는 문서에서 굵게 나와요.</p>
+                            <table>
+                                <tr><td><code>{60~105}</code></td><td>처음과 끝만 쓰면 사이는 고르게 늘어나요 → 60, 65, 70 … 105</td></tr>
+                                <tr><td><code>{60+5}</code></td><td>레벨마다 5씩 늘어나요 → 60, 65, 70 …</td></tr>
+                                <tr><td><code>{60,63.6,67.2,…,105}</code></td><td>레벨별 숫자를 직접 적어요 (정확한 수치를 알 때). 모자라면 마지막 숫자가 이어져요</td></tr>
+                            </table>
+                            <p>예) <code>일반공격 대신 충전하여 1초마다 에너지를 {60~105}점 모으며 대상에게 *연산량 3% 순수피해*를 준다.</code><br>→ Lv.1 「에너지를 <b>60</b>점」 … Lv.10 「에너지를 <b>105</b>점」</p>
+                            <p>한 문장에 여러 개 써도 돼요. 만들어진 레벨 중 문장이 다른 레벨이 있으면 미리보기에서 「직접 고치기」로 그 레벨만 고칠 수 있어요. 「자동으로」를 누르면 다시 자동 글로 돌아가요.</p>
+                            <b>글 꾸미기</b>
+                            <table>
+                                <tr><td><code>*연산피해*</code></td><td>고유명사 색 (아래 사전 색, 사전에 없는 단어는 분홍)</td></tr>
+                                <tr><td><code>*연산력 1% 연산피해*</code></td><td>사전 단어로 끝나면 문장 전체가 그 색</td></tr>
+                                <tr><td><code>*단어|파랑*</code></td><td>고유명사를 원하는 색으로</td></tr>
+                                <tr><td><code>**60점**</code></td><td>굵게</td></tr>
+                                <tr><td><code>^순수피해^</code></td><td>오른쪽 위 작은 주황 글씨 [순수피해]</td></tr>
+                                <tr><td><code>[글자]{파랑}</code> · <code>[글자]{#ff0000}</code></td><td>글자 색만 바꾸기</td></tr>
+                                <tr><td><code>__글자__</code> · <code>~~글자~~</code></td><td>밑줄 · 취소선</td></tr>
+                                <tr><td><code>\*</code></td><td>기호를 글자 그대로 (앞에 \)</td></tr>
+                            </table>
+                            <p>색 이름: 빨강 · 파랑 · 초록 · 노랑 · 주황 · 보라 · 분홍 · 회색</p>
+                            <b>고유명사 사전</b> <span class="markup-guide-note">스킬 칸에서는 사전 단어를 별표 없이 적어도 자동으로 색이 들어가요.</span>
+                            <div id="termDictionaryGuide"></div>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="form-group" data-page="perf-stats">
+                    <label>능력치</label>
+                    <div class="list-guide" id="statBasis"></div>
+                    <div class="checkbox-grid radio-grid">
+                        <label><input type="radio" name="performance.stats.mode" data-field="performance.stats.mode" value="atk" /> 공격</label>
+                        <label><input type="radio" name="performance.stats.mode" data-field="performance.stats.mode" value="hash" /> 연산</label>
+                        <label><input type="radio" name="performance.stats.mode" data-field="performance.stats.mode" value="twin" /> 쌍두</label>
+                    </div>
+                    <button type="button" class="list-btn list-add stat-generate" id="statGenerate">능력치 자동 생성</button>
+                    <div class="list-hint is-warn" id="statStale" hidden>프로필의 클래스·레어도나 공격 방식이 바뀌었어요. 「다시 생성」을 누르면 새 조건으로 만들어요 (지금 숫자는 그대로 있어요).</div>
+                    <!-- 표는 script.js가 GAME_DATA.statRows로 자동 생성 -->
+                    <div id="statTable"></div>
+                    <button type="button" class="list-btn danger" id="statClear" hidden>능력치 비우기</button>
+                </div>
+
+                <div class="form-group" data-page="perf-skill">
+                    <label>스킬</label>
+                    <!-- 패시브·자동·궁극기 칸은 script.js가 GAME_DATA.skillSlots로 자동 생성 -->
+                    <div id="skillEditor"></div>
+                </div>
+
+                <div class="form-group" data-page="perf-engraving">
+                    <label>무장각인</label>
+                    <div class="list-guide">쓴 내용이 있으면 문서에 「무장각인」이 생겨요. 비워 두면 나오지 않아요.</div>
+                    <!-- 각인명·이미지·각인돌파 I~III·각인강화는 script.js가 자동 생성 -->
+                    <div id="engravingEditor"></div>
+                </div>
+
+                <div class="form-group" data-page="perf-review">
+                    <label>평가</label>
+                    <button type="button" class="list-btn list-add" id="reviewAdd">+ 평가 추가</button>
+                    <div id="reviewBox" hidden>
+                        <label class="list-field">평가 글 (빈 줄로 문단을 나눠요)<textarea rows="10" data-field="performance.review.text"></textarea></label>
+                        <button type="button" class="list-btn danger" id="reviewRemove">− 평가 삭제</button>
+                    </div>
+                </div>
+
                 <div class="form-section-title">추천 알고리즘</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="algorithm">
                     <!-- 구역·선택지는 script.js가 GAME_DATA로 자동 생성 -->
                     <div id="algorithmPicker"></div>
                 </div>
 
                 <div class="form-section-title">친밀도</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="int-skill">
                     <label>친밀도 스킬</label>
                     <!-- 칸과 선택지는 script.js가 GAME_DATA.intimacy로 자동 생성 -->
                     <div id="intimacySkillSlots"></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="int-gift">
                     <label>선물 반응</label>
                     <!-- 선물 목록은 script.js가 GAME_DATA.gift로 자동 생성 -->
                     <div class="gift-summary" id="giftSummary"></div>
                     <div id="giftPicker"></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="int-oath">
                     <label>서약</label>
                     <div class="list-field-row">
-                        <label class="list-field">칭호 수식어<input type="text" data-field="intimacy.oath.titlePrefix" placeholder="예) 고고한" /></label>
-                        <label class="list-field">칭호 단어<input type="text" data-field="intimacy.oath.titleSuffix" placeholder="예) 진귀품" /></label>
+                        <label class="list-field">칭호 수식어<input type="text" data-field="intimacy.oath.titlePrefix" /></label>
+                        <label class="list-field">칭호 단어<input type="text" data-field="intimacy.oath.titleSuffix" /></label>
                     </div>
                     <div class="list-hint" id="oathPreview"></div>
                     <label class="list-field">서약 설명<input type="text" data-field="intimacy.oath.description" /></label>
@@ -276,7 +392,7 @@
 
                 <div class="form-section-title">스토리</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="story">
                     <div class="story-tools">
                         <span>칸 이름·개방 친밀도는 자동으로 들어가요</span>
                         <span>
@@ -290,34 +406,63 @@
 
                 <div class="form-section-title">작중 행적</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="history">
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "history.items")이 그림 -->
                     <div data-list-editor="history.items"></div>
                 </div>
 
                 <div class="form-section-title">스킨</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="skin-base">
                     <div class="list-guide">
                         <b>적용범위</b> 3D모델 SD 변경 · Live2D 추가 · Animated 움직이는 일러스트 · Cut-in 궁극기 컷씬 변경 · 보이스 세트 추가
-                        <span>투영 종류는 기본 투영 · 확장 투영 · 완벽 투영 · 스킨 테마 중에서 고르거나 직접 적어도 돼요.</span>
+                        <span>Live2D나 Animated를 고르면 스킨 제목 뒤에 (Live2D) / (Animated)가 붙어요. 둘은 같이 고를 수 없어요.</span>
                     </div>
-                    <datalist id="skinTypeOptions">
-                        <option value="기본 투영"></option>
-                        <option value="확장 투영"></option>
-                        <option value="완벽 투영"></option>
-                        <option value="스킨 테마"></option>
-                    </datalist>
+                    <label>기본 스킨</label>
+                    <!-- 기본/확장/완벽 투영 3칸은 script.js가 GAME_DATA.skinBase로 자동 생성 -->
+                    <div id="skinBaseEditor"></div>
+                </div>
+
+                <div class="form-group" data-page="skin-theme">
+                    <label>스킨 테마</label>
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "skin.items")이 그림 -->
                     <div data-list-editor="skin.items"></div>
                 </div>
 
+                <div class="form-section-title">일러스트</div>
+
+                <div class="form-group" data-page="ill-standing">
+                    <label>스탠딩 CG</label>
+                    <div data-list-editor="illustration.standing"></div>
+                </div>
+
+                <div class="form-group" data-page="ill-cg" id="cgStoryGroup" hidden>
+                    <label id="cgStoryLabel">메인 CG</label>
+                    <div data-list-editor="illustration.cg.story"></div>
+                </div>
+
+                <div class="form-group" data-page="ill-cg">
+                    <label>일반 CG (이벤트 스토리 일러스트)</label>
+                    <div class="list-hint">메인/전속 CG 칸은 프로필의 「등장 스토리」를 고르면 나타나요.</div>
+                    <div data-list-editor="illustration.cg.event"></div>
+                </div>
+
+                <div class="form-group" data-page="ill-expr">
+                    <label>감정 표현</label>
+                    <div class="list-guide">
+                        묶음을 추가하고 「기본」이나 스킨 테마를 고른 뒤 그림 파일을 넣어요.
+                        <span>그림 주소는 쓸 수 없고 <b>파일로만</b> 넣을 수 있어요. 넣은 그림에서 밝게 보이는 정사각형 부분만 256×256으로 문서에 나와요. ↑↓←→로 옮기고 ＋/－로 크기를 맞추면, 다음에 넣는 그림도 같은 위치·크기로 맞춰져요.</span>
+                    </div>
+                    <div data-list-editor="expression.groups"></div>
+                </div>
+
                 <div class="form-section-title">인형 관계</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="relationship">
                     <div class="list-guide">
                         <b>관계명 예시</b> 절친 · 친구 · 앙숙 · 직장동료 · 중요 협력자
                         <span>예시일 뿐이에요. 관계명·인물명 모두 자유롭게 적어 주세요.</span>
+                        <span><b>링크 걸기</b> 인물명에 <code>[이름](https://주소)</code>처럼 쓰면 이름에 링크가 걸려요 (다른 사람 OC 문서 등). 여러 명도 돼요 — <code>[A](주소), [B](주소)</code></span>
                     </div>
                     <!-- 항목 카드는 script.js 목록형 입력(defineList "relationship.items")이 그림 -->
                     <div data-list-editor="relationship.items"></div>
@@ -325,7 +470,7 @@
 
                 <div class="form-section-title">대사</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="voice">
                     <div class="story-tools">
                         <span>칸 이름·코드는 자동으로 들어가요</span>
                         <span>
@@ -337,9 +482,25 @@
                     <div id="voiceEditor"></div>
                 </div>
 
+                <div class="form-group" data-page="voice-sets">
+                    <label>스킨 보이스 세트</label>
+                    <div class="list-guide">
+                        스킨 테마 중 적용범위 「보이스」를 켠 스킨을 골라요. 제목·설명은 스킨 이름으로 자동으로 만들어지고, 안 쓴 대사 칸은 문서에 나오지 않아요.
+                    </div>
+                    <!-- 항목 카드는 script.js 목록형 입력(defineList "voice.sets")이 그림 -->
+                    <div data-list-editor="voice.sets"></div>
+                </div>
+
+                <div class="form-section-title">기타</div>
+
+                <div class="form-group" data-page="etc">
+                    <!-- 항목 카드는 script.js 목록형 입력(defineList "etc.items")이 그림 -->
+                    <div data-list-editor="etc.items"></div>
+                </div>
+
                 <div class="form-section-title">문단 설정</div>
 
-                <div class="form-group">
+                <div class="form-group" data-page="settings">
                     <div class="checkbox-grid section-toggle-grid">
                         <label>
                             <input type="checkbox" data-section="overview" checked disabled />
@@ -402,6 +563,7 @@
                         </label>
                     </div>
                 </div>
+                <div class="page-step" data-page-step="bottom"></div>
             </section>
 
             <section class="preview-panel">
@@ -417,6 +579,8 @@
     </div>
 
     <script src="./data/game-data.js"></script>
+    <script src="./data/stat-db.js"></script>
+    <script src="./data/engraving-db.js"></script>
     <script src="./renderer.js"></script>
     <script src="./script.js"></script>
 </body>
