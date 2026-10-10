@@ -2495,6 +2495,7 @@ function buildSkillEditor() {
     const base = `performance.skills.${slot.key}`;
     const block = document.createElement("details");
     block.className = "story-slot";
+    block.dataset.skillKey = slot.key;
     if (index === 0) block.open = true;
     const summary = document.createElement("summary");
     const name = document.createElement("span");
@@ -2660,20 +2661,52 @@ function handleReviewClick(event) {
 }
 
 // 표기법·레벨 안내 (사전은 GAME_DATA에서 만들어서 항상 최신)
+// 단어 색 사전 안내: 분류마다 접는 칸 + 단어 칩 (색은 지금 화면 밝기에 맞춤)
 function buildMarkupGuide() {
   const box = document.getElementById("termDictionaryGuide");
   if (!box) return;
+  const pal = PREVIEW_PALETTES[document.documentElement.dataset.theme];
+  const tone = (hex) => (pal && pal.fg[hex.toLowerCase()]) || hex;
+  const opened = new Set([...box.querySelectorAll("details[open]")].map((el) => el.dataset.kind));
   box.innerHTML = "";
   Object.entries(GAME_DATA.termColor).forEach(([kind, info]) => {
     const words = Object.entries(GAME_DATA.termDictionary)
       .filter(([, k]) => k === kind)
-      .map(([w]) => w);
-    const row = document.createElement("div");
+      .map(([w]) => w)
+      // 물리·연산 묶음(파생·전달·직접·상태) 조합은 설명 글로 대신하고 칩에는 기본 단어만
+      .filter((w) => !((kind === "physical" || kind === "arithmetic") && /파생|전달|직접|상태/.test(w)));
+    const fold = document.createElement("details");
+    fold.className = "term-group";
+    fold.dataset.kind = kind;
+    if (opened.has(kind)) fold.open = true;
+    const summary = document.createElement("summary");
     const label = document.createElement("b");
-    label.style.color = info.color;
+    label.style.color = tone(info.color);
     label.textContent = info.label;
-    row.append(label, document.createTextNode(` ${words.length ? words.join(", ") : "(그 외 모든 단어)"}`));
-    box.appendChild(row);
+    const count = document.createElement("span");
+    count.className = "term-count";
+    count.textContent = info.dictionary === false ? "표기로 지정" : `${words.length}개`;
+    summary.append(label, count);
+    const body = document.createElement("div");
+    body.className = "term-body";
+    const guide = document.createElement("p");
+    guide.className = "markup-guide-note";
+    guide.textContent = info.guide || "";
+    body.appendChild(guide);
+    if (words.length) {
+      const chips = document.createElement("div");
+      chips.className = "term-chips";
+      words.forEach((word) => {
+        const chip = document.createElement("span");
+        chip.className = "term-chip";
+        chip.style.color = tone(info.color);
+        chip.textContent = word;
+        chips.appendChild(chip);
+      });
+      body.appendChild(chips);
+    }
+    fold.append(summary, body);
+    box.appendChild(fold);
   });
 }
 
@@ -3121,7 +3154,7 @@ const PREVIEW_PALETTES = {
     },
     fg: {
       "#222222": "#e2e4e8", "#373a3c": "#d6d9de", "#666666": "#a3a9b3", "#0275d8": "#5aa9f0",
-      "#1971c2": "#4dabf7", "#2b8a3e": "#51cf66", "#b08900": "#e0b400", "#7048e8": "#9775fa", "#c2417a": "#f06595", "#d9363e": "#ff6b6b",
+      "#1971c2": "#4dabf7", "#2b8a3e": "#51cf66", "#b08900": "#e0b400", "#c97a00": "#ffb84d", "#c92a2a": "#ff8787", "#e8590c": "#ff922b", "#7048e8": "#9775fa", "#c2417a": "#f06595", "#d9363e": "#ff6b6b",
     },
     line: { "#cccccc": "#3a3e46", "#d8dde5": "#3a3e46", "#505050": "#5b606a", "#666666": "#a3a9b3", "#999999": "#7d838d" },
   },
@@ -3148,8 +3181,23 @@ function themePreviewHtml(html) {
   });
 }
 
+// 미리보기에서 펼치거나 접어 둔 칸 기억 (제목 글자 + 몇 번째인지로 구분) → 다시 그려도 그대로
+function previewFoldKeys(root) {
+  const seen = {};
+  return [...root.querySelectorAll("details")].map((el) => {
+    const summary = el.querySelector(":scope > summary");
+    const text = el.id || (summary ? summary.textContent.trim() : "");
+    seen[text] = (seen[text] || 0) + 1;
+    return { el, key: `${text}#${seen[text]}` };
+  });
+}
+
 function render() {
+  const folds = new Map(previewFoldKeys(previewEl).map(({ el, key }) => [key, el.open]));
   previewEl.innerHTML = themePreviewHtml(renderDocument(state));
+  previewFoldKeys(previewEl).forEach(({ el, key }) => {
+    if (folds.has(key)) el.open = folds.get(key);
+  });
   if (typeof markEditing === "function" && editingTarget) markEditing(false); // 폰·패드: 쓰는 칸 표시 유지
   refreshVoiceSkinSelects(); // 스킨 이름·보이스 체크가 바뀌면 보이스 세트 선택지도 따라감
   refreshExprSourceSelects();
@@ -3236,7 +3284,7 @@ const EDITOR_PARTS = [
     title: "성능",
     pages: [
       { key: "perf-stats", title: "능력치" },
-      { key: "perf-skill", title: "스킬" },
+      { key: "perf-skill", title: "스킬", sub: "skill" }, // 하나씩 쓰기: 패시브 / 자동 / 궁극기 한 페이지씩
       { key: "perf-engraving", title: "무장각인" },
       { key: "perf-review", title: "평가" },
     ],
@@ -3327,6 +3375,9 @@ function splitPageParts(pg) {
   }
   if (pg.sub === "voice") {
     return GAME_DATA.voiceGroups.map((group) => ({ id: `${pg.key}:${group.key}`, title: group.label, sub: { kind: "fold", prefix: "voice", keys: group.slots } }));
+  }
+  if (pg.sub === "skill") {
+    return GAME_DATA.skillSlots.map((slot) => ({ id: `${pg.key}:${slot.key}`, title: `스킬 · ${slot.label}`, sub: { kind: "skill", key: slot.key } }));
   }
   if (pg.sub === "algo") {
     return ALGORITHM_TYPES.map((type, index) => ({ id: `${pg.key}:${type}`, title: GAME_DATA.algorithmType[type].label, sub: { kind: "algo", index } }));
@@ -3420,7 +3471,8 @@ function showEditorPage(index, { scroll = false } = {}) {
   const listBox = sub.kind === "list" ? document.querySelector(`[data-list-editor="${sub.path}"]`) : null;
   const onlyGroup = listBox ? listBox.closest(".form-group") : null;
   editorPanel.querySelectorAll(".form-group[data-page]").forEach((group) => {
-    group.classList.toggle("is-off-page", !page.groups.includes(group.dataset.page) || Boolean(onlyGroup && group !== onlyGroup));
+    const keys = [group.dataset.page, ...String(group.dataset.pageAlso || "").split(/\s+/).filter(Boolean)];
+    group.classList.toggle("is-off-page", !keys.some((key) => page.groups.includes(key)) || Boolean(onlyGroup && group !== onlyGroup));
   });
   editorPanel.querySelectorAll(".form-section-title").forEach((title) => title.classList.add("is-off-page"));
   // 고정 칸 (스토리·대사): 이 페이지 칸만, 펼쳐서
@@ -3434,6 +3486,12 @@ function showEditorPage(index, { scroll = false } = {}) {
     });
     const tools = box.closest(".form-group").querySelector(".story-tools");
     if (tools) tools.classList.toggle("is-off-page", on); // 모두 펼치기/접기는 일부 칸만 보일 때 필요 없음
+  });
+  // 스킬 (패시브·자동·궁극기 중 하나만, 펼쳐서)
+  document.querySelectorAll("#skillEditor > .story-slot").forEach((block) => {
+    const mine = sub.kind === "skill" && block.dataset.skillKey === sub.key;
+    block.classList.toggle("is-off-page", sub.kind === "skill" && !mine);
+    if (mine) block.open = true;
   });
   // 추천 알고리즘 구역
   document.querySelectorAll("#algorithmPicker > .algo-zone").forEach((zone, i) => {
@@ -3480,7 +3538,9 @@ function setWriteMode(mode, { keepPlace = true } = {}) {
   if (before) {
     const sameSlot = before.sub && before.sub.kind === "fold"
       ? editorPages.findIndex((p) => p.sub && p.sub.kind === "fold" && p.sub.prefix === before.sub.prefix && p.sub.keys.includes(before.sub.keys[0]))
-      : -1;
+      : before.sub && before.sub.kind === "skill"
+        ? editorPages.findIndex((p) => p.sub && p.sub.kind === "skill" && p.sub.key === before.sub.key)
+        : -1;
     index = sameSlot > -1 ? sameSlot : Math.max(0, editorPages.findIndex((p) => p.groups.includes(before.groups[0])));
   }
   showEditorPage(index);
@@ -3786,6 +3846,7 @@ function applyTheme(theme) {
   document.querySelectorAll("[data-theme-choice]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.themeChoice === name));
   });
+  if (typeof buildMarkupGuide === "function" && document.getElementById("termDictionaryGuide")) buildMarkupGuide(); // 사전 글자색도 밝기에 맞춤
   return name;
 }
 

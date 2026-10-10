@@ -1313,6 +1313,74 @@ details.list-card:not([open]) > summary.list-card-head {
   color: var(--sub-text);
 }
 
+/* 단어 색 사전: 분류마다 접기 + 단어 칩 */
+.term-group {
+  margin: 6px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.term-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.term-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.term-group > summary::before {
+  content: "";
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--sub-text);
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+
+.term-group[open] > summary::before {
+  transform: none;
+}
+
+.term-count {
+  margin-left: auto;
+  color: var(--sub-text);
+  font-size: 11px;
+}
+
+.term-body {
+  padding: 0 10px 10px;
+}
+
+.term-body p {
+  margin: 0 0 6px;
+}
+
+.term-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.term-chip {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft2);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* 성능: 스킬 */
 .form-group .skill-pre-row {
   display: grid;

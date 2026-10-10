@@ -345,41 +345,49 @@ const GAME_DATA = {
     { key: "ultimate", label: "궁극기", color: "#f57c00", levels: 5, fixedCooldown: 30, cutscene: true },
   ],
 
-  // 고유명사 색 분류 (흰 배경에서 읽기 좋게 조금 진하게)
+  // 단어 색 분류 (흰 배경에서 읽기 좋게 조금 진하게)
+  // 효과 3분류는 나무위키 「뉴럴 클라우드/효과」 문서의 녹색·주황색·빨간색 효과 (공식 발췌, 인형 스킬 고유 효과는 제외)
+  // guide: 입력창 「단어 색 사전」 설명. dictionary: false = 사전 단어 없이 표기로만 쓰는 색
   termColor: {
-    physical: { label: "물리", color: "#d9363e" },
-    arithmetic: { label: "연산", color: "#1971c2" },
-    buff: { label: "버프", color: "#2b8a3e" },
-    neutral: { label: "물리도 연산도 아님", color: "#b08900" },
-    cc: { label: "상태이상(CC)", color: "#e8590c" },
-    unique: { label: "캐릭터 스킬 고유명사", color: "#7048e8" },
-    unknown: { label: "사전에 없는 단어", color: "#c2417a" },
+    physical: { label: "물리 피해", color: "#d9363e", guide: "물리피해 · 물리 파생피해처럼 파생·전달·직접·상태와 붙으면 한 덩어리로 물리 색" },
+    arithmetic: { label: "연산 피해", color: "#1971c2", guide: "연산피해 · 연산 파생피해처럼 파생·전달·직접·상태와 붙으면 한 덩어리로 연산 색" },
+    green: { label: "녹색 효과", color: "#2b8a3e", guide: "공식 효과 목록의 녹색 효과" },
+    orange: { label: "주황색 효과", color: "#c97a00", guide: "공식 효과 목록의 주황색 효과" },
+    red: { label: "빨간색 효과", color: "#c92a2a", guide: "공식 효과 목록의 빨간색 효과" },
+    unique: { label: "고유명사", color: "#7048e8", guide: "캐릭터 스킬 고유명사는 <여명의 가호>처럼 꺾쇠로 감싸기 (문서에는 꺾쇠 없이 색만)", dictionary: false },
+    accent: { label: "기타 강조", color: "#c2417a", guide: "*단어*로 감쌌는데 사전에 없는 단어", dictionary: false },
   },
-  // 고유명사 사전: 단어 → 분류. 스킬 글에서는 별표 없이 적어도 자동으로 색이 들어감
+  // 단어 사전: 단어 → 분류. 스킬 글에서는 별표 없이 적어도 자동으로 색이 들어감
+  // 긴 단어가 먼저 맞춰짐 (예: 「고정피해」 주황 / 「고정」 빨강, 「연소 피해」 주황 / 「연소」 빨강, 「물리 파생피해」 물리 / 「파생피해」 주황)
   termDictionary: {
-    물리피해: "physical",
-    연산피해: "arithmetic",
-    은신: "buff",
-    치료: "buff",
-    재생: "buff",
-    슈퍼아머: "buff",
-    보호막: "buff",
-    점멸: "buff",
-    순수피해: "neutral",
-    고정피해: "neutral",
-    감속: "cc",
-    기절: "cc",
-    도발: "cc",
-    띄움: "cc",
-    밀어냄: "cc",
-    연소: "cc",
-    제어: "cc",
-    무장해제: "cc",
-    "대응 속성": "unique",
-    "여명의 가호": "unique",
-    "청명한 새벽": "unique",
+    // 물리 · 연산 피해 (파생·전달·직접·상태와 붙으면 띄어쓰기·순서와 상관없이 한 덩어리)
+    물리피해: "physical", "물리 피해": "physical", 연산피해: "arithmetic", "연산 피해": "arithmetic",
+    ...Object.fromEntries(
+      ["physical", "arithmetic"].flatMap((kind) => {
+        const el = kind === "physical" ? "물리" : "연산";
+        return ["파생", "전달", "직접", "상태"].flatMap((m) => [`${el} ${m}피해`, `${el}${m}피해`, `${m} ${el}피해`, `${m}${el}피해`].map((w) => [w, kind]));
+      })
+    ),
+    // 녹색 효과
+    체력보호막: "green", 슈퍼아머: "green", 간호: "green", 수비: "green", 효과저항: "green", 탈취: "green",
+    은신: "green", 카니발: "green", 효율상승: "green", "여명의 가호": "green", "청명한 새벽": "green", 흡혈갈증: "green",
+    재생: "green", 노도: "green", "강화 마크": "green",
+    // 주황색 효과
+    순수피해: "orange", 파생피해: "orange", 전달피해: "orange", 고정피해: "orange", 직접피해: "orange", 상태피해: "orange",
+    지속스킬: "orange", 희생: "orange", 점멸: "orange", 채널링: "orange", 항균층: "orange", "가면 특성": "orange",
+    소환물: "orange", "세계선 변동": "orange", 투영체: "orange", "전격 필드": "orange", "연소 피해": "orange", "고유 스킬": "orange",
+    "드럼 동료기": "orange", "트럼펫 동료기": "orange", "예비 단서": "orange", 분신: "orange", 라보멤: "orange", "피해 분담": "orange",
+    "여우 카트": "orange", "능력치 전환": "orange", "치명타 불가": "orange", 우화: "orange", "회피 가능 스킬": "orange", "코어 과충전": "orange",
+    섭취: "orange", 빙폭: "orange",
+    // 빨간색 효과
+    맹목: "red", 침묵: "red", 출혈: "red", 트로이: "red", 기절: "red", 띄움: "red",
+    고정: "red", 난치병: "red", 도발: "red", 중상: "red", 집중공격: "red", 구속: "red",
+    추방: "red", 매료: "red", 밀어냄: "red", 작열: "red", 무장해제: "red", 연소: "red",
+    "추적의 룬": "red", 고장: "red", 지체: "red", 휘감기: "red", 제어: "red", 슬럼프: "red",
+    공중부양: "red", 과민공격: "red", 약염: "red", 피해증폭: "red", 무중력: "red", 불씨: "red",
+    진폭: "red", "킬링 마크": "red", "스타 볼트": "red", 탄환: "red", 운석: "red", 중독: "red",
+    눈부심: "red",
   },
-  // 표기법 [글자]{색} · *단어|색* 에 쓰는 색 이름
   namedColor: {
     빨강: "#d9363e",
     파랑: "#1971c2",

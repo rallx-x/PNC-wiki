@@ -745,17 +745,17 @@ function renderSkin(state, section) {
 }
 
 /* ---------- 표기법 (스킬·평가 글) ---------- */
-// *고유명사*  *단어|색*  **굵게**  ^위첨자^  [글자]{색}  __밑줄__  ~~취소선~~  \기호(그대로)
+// *강조*  *단어|색*  <고유명사>  **굵게**  ^위첨자^  [글자]{색}  __밑줄__  ~~취소선~~  \기호(그대로)
 // 고유명사 색: 사전 단어로 끝나면 그 분류 색, 아니면 「사전에 없는 단어」 색
 // autoTerms: 사전 단어는 별표 없이도 자동 색 (스킬 글)
-const MARK_ESCAPABLE = "\\*^[]{}_~|";
+const MARK_ESCAPABLE = "\\*^[]{}_~|<>";
 let termRegexCache = null;
 
 function termColorOf(text) {
   const t = text.trim();
   const words = Object.keys(GAME_DATA.termDictionary).sort((a, b) => b.length - a.length);
   const hit = words.find((word) => t.endsWith(word));
-  const kind = hit ? GAME_DATA.termDictionary[hit] : "unknown";
+  const kind = hit ? GAME_DATA.termDictionary[hit] : "accent";
   return GAME_DATA.termColor[kind].color;
 }
 
@@ -776,7 +776,7 @@ function autoTermHtml(escapedPlain) {
 }
 
 function markInline(text, autoTerms) {
-  const re = /\*\*(.+?)\*\*|\*([^*\n]+?)\*|\^([^^\n]+?)\^|\[([^\]\n]+?)\]\{([^}\n]+?)\}|__(.+?)__|~~(.+?)~~/g;
+  const re = /\*\*(.+?)\*\*|\*([^*\n]+?)\*|\^([^^\n]+?)\^|\[([^\]\n]+?)\]\{([^}\n]+?)\}|__(.+?)__|~~(.+?)~~|<([^<>\n]+?)>/g;
   let out = "";
   let last = 0;
   let m;
@@ -796,6 +796,7 @@ function markInline(text, autoTerms) {
       out += color ? `<span style="color:${color};">${markInline(m[4], false)}</span>` : plain(m[0]);
     } else if (m[6] !== undefined) out += `<span style="text-decoration:underline;">${markInline(m[6], autoTerms)}</span>`;
     else if (m[7] !== undefined) out += `<span style="text-decoration:line-through;">${markInline(m[7], autoTerms)}</span>`;
+    else if (m[8] !== undefined) out += `<span style="color:${GAME_DATA.termColor.unique.color};">${markInline(m[8], false)}</span>`; // <고유명사>
   }
   return out + plain(text.slice(last));
 }
@@ -803,7 +804,7 @@ function markInline(text, autoTerms) {
 // 글 전체 → HTML (줄바꿈 → <br>). 「\기호」는 기호 그대로
 function renderMarkup(raw, autoTerms) {
   const holds = [];
-  const text = String(raw == null ? "" : raw).replace(/\\([\\*^\[\]{}_~|])/g, (_, ch) => {
+  const text = String(raw == null ? "" : raw).replace(/\\([\\*^\[\]{}_~|<>])/g, (_, ch) => {
     holds.push(ch);
     return `\uE000${holds.length - 1}\uE001`;
   });
