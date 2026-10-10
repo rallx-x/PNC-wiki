@@ -2270,3 +2270,134 @@ button.page-nav-item:hover {
   transform: translateX(-50%);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
+
+/* =========================================================
+   알고리즘 배치 입력
+   ========================================================= */
+.board-section + .board-section {
+  margin-top: 18px;
+}
+
+.board-section-head {
+  margin: 10px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.board-preview {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 12px;
+}
+
+.board-preview .pncwiki-board-zone {
+  flex: 0 1 220px !important;
+}
+
+.board-preview-wrap {
+  margin-top: 12px;
+}
+
+.board-doc-check {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.board-doc-check input {
+  width: auto;
+  margin: 0;
+}
+
+.board-section .list-card-body.list-field-row {
+  margin-bottom: 0;
+}
+
+/* 알고리즘 배치 여러 개 */
+.board-add {
+  margin: 0 0 16px;
+}
+
+.board-add-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.list-btn.board-add-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.board-add-choice b {
+  font-size: 14px;
+}
+
+.board-add-choice span {
+  color: var(--sub-text);
+  font-size: 12px;
+}
+
+.board-preset {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.board-preset-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.board-preset-kind {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.board-sub-title {
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 세 구간 판을 작게 한 줄로 */
+.board-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.board-preview.is-mini {
+  flex: 0 0 auto;
+  margin: 0;
+  zoom: 0.62;
+}
+
+.board-preview.is-mini .pncwiki-board-zone {
+  flex: 0 0 200px !important;
+  width: 200px;
+}
+
+.board-seat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}

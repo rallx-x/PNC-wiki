@@ -6,13 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>뉴럴 클라우드 인형 위키 HTML 생성기</title>
     <link rel="stylesheet" href="./style.css" />
-    <script>
-        // 화면 밝기: 그리기 전에 먼저 적용 (깜빡임 방지). 이 브라우저에만 기억
-        try {
-            const theme = localStorage.getItem("pnc_wiki_theme");
-            if (theme === "mid" || theme === "dark") document.documentElement.dataset.theme = theme;
-        } catch (e) {}
-    </script>
+    <!-- 보안 규칙: 이 사이트 파일의 스크립트만 실행, 그림은 https·직접 넣은 이미지만, 다른 사이트로 양식 전송·삽입 금지 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <script src="./theme-init.js"></script>
 </head>
 
 <body>
@@ -397,8 +394,16 @@
                 <div class="form-section-title">추천 알고리즘</div>
 
                 <div class="form-group" data-page="algorithm">
+                    <!-- 출력만 제어: 꺼도 판 미리보기·1칸 설정은 그대로 -->
+                    <label class="board-doc-check"><input type="checkbox" data-field="sections.algoBoard" /> 알고리즘 배치를 문서에 넣기</label>
                     <!-- 구역·선택지는 script.js가 GAME_DATA로 자동 생성 -->
                     <div id="algorithmPicker"></div>
+                </div>
+
+                <!-- 알고리즘 배치 (시뮬레이션): 2칸 세트는 추천 알고리즘에서 자동 연결, 여기서는 남은 칸 1칸만. script.js가 자동 생성 -->
+                <div class="form-group" data-page="algo-board">
+                    <label>알고리즘 배치</label>
+                    <div id="algoBoardEditor"></div>
                 </div>
 
                 <div class="form-section-title">친밀도</div>

@@ -129,36 +129,6 @@ const GAME_DATA = {
     special: { label: "특이성", tint: "#b8e5c2", accent: "#48b961" },
   },
 
-  // 구역별로 고를 수 있는 옵션 종류 (attribute 키). 수치는 다루지 않음.
-  // main = 주 옵션 후보, sub = 부 옵션 후보 (사용자 제공 「주요 수치」「부가 수치」 표 기준)
-  algorithmOptionRules: {
-    offense: {
-      main: ["atk", "hashrate", "physical-penetration", "operand-penetration"],
-      sub: [
-        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
-        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
-        "post-battle-hp", "debuff-resistance", "damage-boost",
-      ],
-    },
-    stability: {
-      main: ["max-hp", "physical-def", "operand-def", "post-battle-hp"],
-      sub: [
-        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
-        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
-        "post-battle-hp", "debuff-resistance", "injury-mitigation",
-      ],
-    },
-    special: {
-      main: ["physical-def", "operand-def", "crit-rate", "crit-damage", "healing-effect", "skill-haste"],
-      sub: [
-        "max-hp", "atk", "hashrate", "physical-def", "operand-def",
-        "physical-penetration", "operand-penetration", "crit-rate", "crit-damage",
-        "dodge-rate", "post-battle-hp", "debuff-resistance", "healing-effect", "skill-haste",
-      ],
-    },
-  },
-
-  // 추천 알고리즘. set2 / set3 = 2세트·3세트 효과 (출처: 나무위키 「뉴럴 클라우드/알고리즘」, 설명 문단 제외)
   algorithm: {
     // 공격성
     "limit-value": { label: "역치초과 반응", type: "offense", set2: "주는 피해량 +5%", set3: "자신보다 최대체력이 높은 적에게 피해를 줄 때, 추가로 해당 피해량의 (6%+적 최대체력/자신 최대체력×3%)만큼의 파생피해를 준다. 피해 유형은 원래 피해량 유형과 동일하고, 최대치는 20%.", icon: "algorithm/limit-value.png" },
@@ -444,12 +414,68 @@ const GAME_DATA = {
   breakthroughStages: ["I", "II", "III"],
   breakthroughEtc: { key: "etc", label: "기타", color: "#868e96" },
 
+  // ---------- 알고리즘 배치 (시뮬레이션) ----------
+  // 판: 구간마다 2열 × 4줄. 자물쇠가 다 풀린 최종 모양. 모양은 A(4칸)·B(5칸)·C(6칸) 세 가지뿐
+  //   open = 열린 칸 [줄, 열] / pairs = 2칸(세로) 자리의 윗칸 [줄, 열] — 이 순서로 채움 (왼1-2 → 오1-2 → 왼3-4)
+  algorithmBoard: {
+    rows: 4,
+    cols: 2,
+    shapes: {
+      A: { open: [[0, 0], [0, 1], [1, 0], [1, 1]], pairs: [[0, 0], [0, 1]] },
+      B: { open: [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0]], pairs: [[0, 0], [0, 1]] },
+      C: { open: [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [3, 0]], pairs: [[0, 0], [0, 1], [2, 0]] },
+    },
+    // 클래스별 구간 모양 (게임 화면 확인)
+    classes: {
+      guard: { offense: "A", stability: "C", special: "B" },
+      sniper: { offense: "C", stability: "A", special: "B" },
+      warrior: { offense: "C", stability: "B", special: "A" },
+      specialist: { offense: "B", stability: "A", special: "C" },
+      medic: { offense: "A", stability: "B", special: "C" },
+    },
+  },
+  // 주 옵션 (주황 고정): [옵션 키, 1칸 값, 2칸 값]. 키 끝 % = 퍼센트 옵션 (고정값과 별개 옵션)
+  algorithmMain: {
+    offense: [
+      ["atk", 27, 54], ["atk%", 6, 12], ["hashrate", 27, 54], ["hashrate%", 6, 12],
+      ["physical-penetration", 10, 20], ["physical-penetration%", 3.6, 7.2], ["operand-penetration", 10, 20], ["operand-penetration%", 3.6, 7.2],
+    ],
+    stability: [
+      ["max-hp", 900, 1800], ["max-hp%", 6, 12], ["physical-def", 28, 56], ["physical-def%", 3.6, 7.2],
+      ["operand-def", 28, 56], ["operand-def%", 3.6, 7.2], ["post-battle-hp", 360, 720],
+    ],
+    special: [
+      ["physical-def", 28, 56], ["physical-def%", 3.6, 7.2], ["operand-def", 28, 56], ["operand-def%", 3.6, 7.2],
+      ["crit-rate", 4, 8], ["crit-damage", 8, 16], ["healing-effect", 2, 4], ["skill-haste", 4, 8],
+    ],
+  },
+  // 부가 옵션 (주황 고정, 1칸·2칸 같은 값) + 구간별로 붙을 수 있는 옵션 (수치 표의 구간별 목록 기준)
+  algorithmSub: {
+    values: {
+      "max-hp": 1080, "max-hp%": 7.2, atk: 32, "atk%": 7.2, hashrate: 32, "hashrate%": 7.2,
+      "physical-def": 33, "physical-def%": 4.3, "operand-def": 33, "operand-def%": 3.3,
+      "physical-penetration": 12, "operand-penetration": 12, "crit-rate": 4.8, "crit-damage": 9.6,
+      "post-battle-hp": 432, "debuff-resistance": 30, "damage-boost": 3.9, "injury-mitigation": 3.9,
+      "dodge-rate": 3.9, "healing-effect": 2.4, "skill-haste": 4.8,
+    },
+    zones: {
+      offense: ["max-hp", "atk", "atk%", "hashrate", "hashrate%", "physical-def", "operand-def", "physical-penetration", "operand-penetration", "crit-rate", "crit-damage", "post-battle-hp", "debuff-resistance", "damage-boost"],
+      stability: ["max-hp", "max-hp%", "atk", "hashrate", "physical-def", "physical-def%", "operand-def", "operand-def%", "physical-penetration", "operand-penetration", "crit-rate", "crit-damage", "post-battle-hp", "debuff-resistance", "injury-mitigation"],
+      special: ["max-hp", "atk", "hashrate", "physical-def", "physical-def%", "operand-def", "operand-def%", "physical-penetration", "operand-penetration", "crit-rate", "crit-damage", "dodge-rate", "post-battle-hp", "debuff-resistance", "healing-effect", "skill-haste"],
+    },
+  },
+  // 원래 %로 표시하는 능력치 (키 끝에 %가 없어도 값 뒤에 %)
+  percentStats: ["crit-rate", "crit-damage", "healing-effect", "skill-haste", "dodge-rate", "damage-boost", "injury-mitigation"],
+
   ui: {},
 };
 
 // 키 → 표시 이름. 없는 키면 빈 문자열.
+// 자기 목록에 실제로 있는 키만 (불러온 파일에 "constructor" 같은 키가 와도 엉뚱한 값을 돌려주지 않게)
 function getItem(category, key) {
-  return (GAME_DATA[category] && GAME_DATA[category][key]) || null;
+  const table = Object.prototype.hasOwnProperty.call(GAME_DATA, category) ? GAME_DATA[category] : null;
+  const k = typeof key === "number" ? String(key) : key;
+  return table && typeof k === "string" && Object.prototype.hasOwnProperty.call(table, k) ? table[k] : null;
 }
 
 function getLabel(category, key) {
@@ -483,10 +509,21 @@ function getAlgorithmsOfType(type) {
   return Object.keys(GAME_DATA.algorithm).filter((key) => GAME_DATA.algorithm[key].type === type);
 }
 
-// 구역의 주/부 옵션 후보 (kind = "main" | "sub")
+// 구역의 주/부 옵션 후보 (kind = "main" | "sub") — 알고리즘 배치 수치표와 같은 목록 (% 옵션 포함, 예: "atk%")
 function getAllowedOptions(type, kind) {
-  const rule = GAME_DATA.algorithmOptionRules[type];
-  return rule && Array.isArray(rule[kind]) ? rule[kind] : [];
+  if (kind === "main") return (GAME_DATA.algorithmMain[type] || []).map((row) => row[0]);
+  return (GAME_DATA.algorithmSub.zones[type] || []).slice();
+}
+
+// 옵션 키 → 능력치 키 ("atk%" → "atk")
+function getOptionBase(key) {
+  return String(key || "").replace(/%$/, "");
+}
+
+// 옵션 키 → 표시 이름 ("atk" → 공격력, "atk%" → 공격력%). 모르는 키면 ""
+function getOptionLabel(key) {
+  const label = getLabel("attribute", getOptionBase(key));
+  return label ? `${label}${/%$/.test(String(key)) ? "%" : ""}` : "";
 }
 
 // 친밀도 스킬 효과 문장. 예: getIntimacyText("output-enhancement", 5) → "공격력 55 상승."

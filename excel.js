@@ -921,14 +921,152 @@ function xlPerformance(d, state, section) {
 }
 
 /* 4. 추천 알고리즘 */
-function xlAlgorithm(d, state) {
+function xlAlgorithm(d, state, section) {
+  const subs = section && section.subs ? section.subs : [];
+  if (subs.length) d.heading(subs[0].number, subs[0].title, subs[0].depth, subs[0].anchor);
+  xlAlgorithmZones(d, state);
+  if (subs.length) {
+    d.heading(subs[1].number, subs[1].title, subs[1].depth, subs[1].anchor);
+    xlAlgorithmBoard(d, state);
+  }
+}
+
+// 4.2 알고리즘 배치. 배치가 2개 이상이면 배치 이름 줄 + 내용, 2번째부터는 접힌 묶음 (왼쪽 +)
+function xlAlgorithmBoard(d, state) {
+  const shown = boardShownPresets(state);
+  if (!boardUsesFolds(state)) {
+    if (shown.length) xlBoardPreset(d, state, shown[0]);
+    return;
+  }
+  const presets = getBoardPresets(state);
+  shown.forEach((i, n) => {
+    const name = boardPresetName(presets[i], i);
+    d.line([{ g1: 1, g2: XL_GRID, value: n === 0 ? name : `${name}  (왼쪽 + 를 누르면 펼쳐져요)`, font: { size: 12, bold: true, color: d.T.fg(C.text) }, align: { indent: 1 }, border: { bottom: d.side(C.rule) } }], { min: 26 });
+    d.gap(6);
+    const g1 = d.r;
+    xlBoardPreset(d, state, i);
+    if (n > 0 && d.r - 1 >= g1) d.sheet.group(g1, d.r - 1, true);
+  });
+}
+
+// 배치 하나: 판(구간마다 칸 8개 폭) → 조각 상세 표 → 기본 능력 → 알고리즘 세트
+function xlBoardPreset(d, state, presetIndex) {
+  const T = d.T;
+  const placements = ALGORITHM_ZONES.map((zone) => getBoardPlacement(state, zone, presetIndex)).filter(Boolean);
+  if (!placements.length) return;
+  const ORANGE = BOARD_ORANGE;
+  // 판: 구간 i는 격자 칸 1+8i ~ 8+8i, 판의 열 하나 = 격자 4칸
+  const top = d.r;
+  d.line(placements.map((pl, i) => ({ g1: 1 + i * 8, g2: 8 + i * 8, value: GAME_DATA.algorithmType[pl.zone].label, fill: GAME_DATA.algorithmType[pl.zone].accent, font: { bold: true, color: C.white }, align: { h: "center" } })), { min: 22 });
+  const r0 = d.r;
+  for (let r = 0; r < GAME_DATA.algorithmBoard.rows; r += 1) d.gap(46); // 칸은 아래에서 구간마다 병합해 채움 (겹치는 병합 없이)
+  placements.forEach((pl, i) => {
+    const open = new Set(pl.shape.open.map(([r, c]) => `${r},${c}`));
+    const covered = new Set();
+    const g = (c) => 1 + i * 8 + c * 4;
+    const tile = (row, rows, col, text, dots) => {
+      d.sheet.mergeSet(r0 + row, d.col(g(col)), r0 + row + rows - 1, d.col(g(col) + 3), text, {
+        fill: "#f4f4f4",
+        font: d.font({ size: XL_FONT.small, bold: true, color: "#222222" }),
+        align: { h: "center", v: "center", wrap: true },
+        border: { top: { style: "thick", color: ORANGE }, bottom: { style: "thick", color: ORANGE }, left: { style: "thin", color: "#2b2d33" }, right: { style: "thin", color: "#2b2d33" } },
+      });
+      for (let r = row; r < row + rows; r += 1) covered.add(`${r},${col}`);
+      return dots;
+    };
+    pl.placed.forEach((p) => {
+      const v = boardMainValue(pl.zone, p.main, 2);
+      tile(p.row, 2, p.col, `${p.main && v != null ? `${boardOptionLabel(p.main)} ${boardValueText(p.main, v)}` : "-"}\n${getItem("algorithm", p.key).label}\n●●`);
+    });
+    pl.singles.forEach((sg) => {
+      if (!sg.main) return;
+      tile(sg.row, 1, sg.col, `${boardOptionLabel(sg.main)} ${boardValueText(sg.main, boardMainValue(pl.zone, sg.main, 1))}\n●`);
+    });
+    for (let r = 0; r < GAME_DATA.algorithmBoard.rows; r += 1) {
+      for (let c = 0; c < GAME_DATA.algorithmBoard.cols; c += 1) {
+        if (covered.has(`${r},${c}`)) continue;
+        const isOpen = open.has(`${r},${c}`);
+        d.sheet.mergeSet(r0 + r, d.col(g(c)), r0 + r, d.col(g(c) + 3), isOpen ? null : "✕", {
+          fill: isOpen ? "#3a3d44" : "#1f2126",
+          font: d.font({ size: 14, color: "#5a5e66" }),
+          align: { h: "center", v: "center" },
+          border: d.all("#45484f"),
+        });
+      }
+    }
+  });
+  d.box(top, 1, d.r - 1, XL_GRID, "#45484f");
+  d.gap(12);
+
+  // 조각 상세
+  const head = (g1, g2, text) => ({ g1, g2, value: text, fill: T.bg(C.tableHead), font: { bold: true, color: T.fg(C.infoText) }, align: { h: "center" }, border: d.all(C.infoLine) });
+  const cell = (g1, g2, value, extra = {}) => ({ g1, g2, value, font: { color: T.fg(C.infoText), ...(extra.font || {}) }, align: { h: extra.h || "center", wrap: true, indent: extra.indent }, border: d.all(C.infoLine), fill: extra.fill });
+  d.line([{ g1: 1, g2: XL_GRID, value: "알고리즘 상세", fill: C.algoHead, font: { bold: true, color: C.white }, align: { indent: 1 } }], { min: 22 });
+  const dtop = d.r;
+  d.line([head(1, 3, "구간"), head(4, 9, "알고리즘"), head(10, 15, "주 옵션"), head(16, 24, "부가 옵션")], { min: 20 });
+  placements.forEach((pl) => {
+    const zl = GAME_DATA.algorithmType[pl.zone].label;
+    const subText = (list) => list.map((k) => (boardSubValue(pl.zone, k) != null ? `${boardOptionLabel(k)} +${boardValueText(k, boardSubValue(pl.zone, k))}` : "-")).join("\n");
+    pl.placed.forEach((p) => {
+      const v = boardMainValue(pl.zone, p.main, 2);
+      d.line([cell(1, 3, zl), cell(4, 9, getItem("algorithm", p.key).label, { font: { bold: true } }), cell(10, 15, p.main && v != null ? `${boardOptionLabel(p.main)} ${boardValueText(p.main, v)}` : "-", { fill: "#fff1e0" }), cell(16, 24, subText(p.subs || []))], { min: 30 });
+    });
+    pl.singles.forEach((sg) => {
+      if (!sg.main) return;
+      d.line([cell(1, 3, zl), cell(4, 9, `${boardOptionLabel(sg.main)} (1칸)`, { font: { bold: true } }), cell(10, 15, `${boardOptionLabel(sg.main)} ${boardValueText(sg.main, boardMainValue(pl.zone, sg.main, 1))}`, { fill: "#fff1e0" }), cell(16, 24, subText([sg.sub]))], { min: 20 });
+    });
+  });
+  d.box(dtop, 1, d.r - 1, XL_GRID, C.cardBorder);
+  d.gap(12);
+
+  // 기본 능력 (한 줄에 2개)
+  const totals = getBoardTotals(placements);
+  if (totals.length) {
+    d.line([{ g1: 1, g2: XL_GRID, value: "기본 능력", fill: C.algoHead, font: { bold: true, color: C.white }, align: { indent: 1 } }], { min: 22 });
+    for (let i = 0; i < totals.length; i += 2) {
+      const pair = totals.slice(i, i + 2);
+      const cells = [];
+      pair.forEach((t, j) => {
+        const g = 1 + j * 12;
+        cells.push({ g1: g, g2: g + 7, value: boardOptionLabel(t.key), fill: T.bg(C.soft), font: { bold: true }, align: { indent: 1 }, border: d.all(C.border) });
+        cells.push({ g1: g + 8, g2: g + 11, value: `+${boardValueText(t.key, t.value)}`, fill: T.bg(C.soft), font: { bold: true }, align: { h: "right", indent: 1 }, border: d.all(C.border) });
+      });
+      d.line(cells, { min: 22 });
+    }
+    d.gap(12);
+  }
+
+  // 알고리즘 세트
+  const sets = [];
+  placements.forEach((pl) => pl.sets.forEach((set) => sets.push(set)));
+  if (sets.length) {
+    d.line([{ g1: 1, g2: XL_GRID, value: "알고리즘 세트", fill: C.algoHead, font: { bold: true, color: C.white }, align: { indent: 1 } }], { min: 22 });
+    const stop = d.r;
+    sets.forEach((set) => {
+      const badge = (on, label) => ({ value: label, fill: on ? BOARD_SET_ON : BOARD_SET_OFF, font: { size: XL_FONT.small, bold: true, color: C.white }, align: { h: "center" }, border: d.all(C.infoLine) });
+      const effects = [set.on2 ? `2세트  ${set.item.set2 || ""}` : "", set.on3 ? `3세트  ${set.item.set3}` : ""].filter(Boolean).join("\n") || "켜진 세트 효과 없음";
+      d.line(
+        [
+          { g1: 1, g2: 5, value: set.item.label, font: { bold: true }, align: { indent: 1 }, border: d.all(C.infoLine) },
+          { g1: 6, g2: 7, ...badge(set.on2, "2세트") },
+          set.item.set3 ? { g1: 8, g2: 9, ...badge(set.on3, "3세트") } : { g1: 8, g2: 9, value: null, border: d.all(C.infoLine) },
+          { g1: 10, g2: XL_GRID, value: effects, font: { color: T.fg(set.on2 ? C.infoText : C.subText) }, align: { indent: 1 }, border: d.all(C.infoLine) },
+        ],
+        { min: 24 }
+      );
+    });
+    d.box(stop, 1, d.r - 1, XL_GRID, C.cardBorder);
+  }
+}
+
+function xlAlgorithmZones(d, state) {
   const T = d.T;
   ALGORITHM_ZONES.forEach((type) => {
     const zone = state.algorithm[type];
     const typeItem = GAME_DATA.algorithmType[type];
     const allowedMain = getAllowedOptions(type, "main");
     const allowedSub = getAllowedOptions(type, "sub");
-    const pick = (list, allowed) => [...new Set((Array.isArray(list) ? list : []).filter((key) => key && allowed.includes(key) && getItem("attribute", key)))];
+    const pick = (list, allowed) => [...new Set((Array.isArray(list) ? list : []).filter((key) => key && allowed.includes(key) && getItem("attribute", getOptionBase(key))))];
     const sharedMain = pick(zone.main, allowedMain);
     const sharedSub = pick(zone.sub, allowedSub);
     const seen = new Set();
@@ -941,7 +1079,7 @@ function xlAlgorithm(d, state) {
       return { key: slot.key, item, custom: true, main: pick([slot.main], allowedMain), sub: pick(slot.sub, allowedSub) };
     });
     const anyCustom = cols.some((col) => col && col.custom);
-    const names = (list) => (list.length ? list.map((key) => getLabel("attribute", key)).join(" · ") : "-");
+    const names = (list) => (list.length ? list.map((key) => getOptionLabel(key)).join(" · ") : "-");
     const L = 5; // 표 시작 칸 (폭 16칸 = 512px, 가운데)
     const colSpan = (i) => [L + 4 + i * 4, L + 7 + i * 4];
     const lab = (a, b, text) => ({ g1: a, g2: b, value: text, fill: T.bg(C.tableHead), font: { size: XL_FONT.small, color: T.fg(C.infoText) }, align: { h: "center" }, border: { top: d.side(C.infoLine) } });
@@ -1538,7 +1676,7 @@ function buildDataSheets(book, state) {
     const keys = [];
     ALGORITHM_ZONES.forEach((type) => {
       const zone = state.algorithm[type];
-      const labels = (list) => (Array.isArray(list) ? list : [list]).filter(Boolean).map((k) => getLabel("attribute", k)).filter(Boolean).join(" · ");
+      const labels = (list) => (Array.isArray(list) ? list : [list]).filter(Boolean).map((k) => getOptionLabel(k)).filter(Boolean).join(" · ");
       for (let i = 0; i < 3; i += 1) {
         const slot = zone.slots[i] || {};
         const custom = slot.custom === true;
@@ -1556,6 +1694,53 @@ function buildDataSheets(book, state) {
         { title: "주 옵션", px: 160 },
         { title: "부 옵션", px: 200 },
         { title: "옵션 방식", px: 80 },
+      ],
+      rows,
+      keys
+    );
+  }
+
+  // 알고리즘 배치 (시뮬레이션): 배치마다 판에 놓인 조각 (2칸 key = 옵션 원본인 추천 칸, 1칸 key = 그 배치의 1칸)
+  {
+    const rows = [];
+    const keys = [];
+    const pos = (r, c) => `${["왼", "오"][c]}${r + 1}`;
+    const subCells = (zone, list) => list.flatMap((k) => (boardSubValue(zone, k) != null ? [boardOptionLabel(k), boardSubValue(zone, k)] : ["", ""]));
+    const presets = getBoardPresets(state);
+    presets.forEach((preset, pi) => {
+      const presetName = boardPresetName(preset, pi);
+      ALGORITHM_ZONES.forEach((zone) => {
+        const pl = getBoardPlacement(state, zone, pi);
+        const label = GAME_DATA.algorithmType[zone].label;
+        if (!pl) return;
+        const one = (p, kind, place) => {
+          const cells = kind === "2칸" ? 2 : 1;
+          const v = boardMainValue(zone, p.main, cells);
+          const subs = kind === "2칸" ? p.subs || [] : [p.sub];
+          const sc = subCells(zone, subs);
+          rows.push([presetName, label, rows.length + 1, kind, kind === "2칸" ? getItem("algorithm", p.key).label : boardOptionLabel(p.main), boardOptionLabel(p.main), v == null ? "" : v, sc[0] || "", sc[1] === undefined ? "" : sc[1], sc[2] || "", sc[3] === undefined ? "" : sc[3], place]);
+          keys.push(kind === "2칸" ? `algorithm.${zone}.slots.${p.rank}` : `algorithm.board.presets.${pi}.singles.${zone}.${p.index}`);
+        };
+        pl.placed.forEach((p) => one(p, "2칸", `${pos(p.row, p.col)}-${p.row + 2}`));
+        pl.singles.forEach((sg) => sg.main && one(sg, "1칸", pos(sg.row, sg.col)));
+      });
+    });
+    addDataSheet(
+      book,
+      "알고리즘 배치",
+      [
+        { title: "배치 이름", px: 140 },
+        { title: "구간", px: 70 },
+        { title: "순서", px: 50 },
+        { title: "종류", px: 50 },
+        { title: "알고리즘", px: 130 },
+        { title: "주 옵션", px: 110 },
+        { title: "주 수치", px: 70 },
+        { title: "부가 옵션 1", px: 110 },
+        { title: "수치", px: 60 },
+        { title: "부가 옵션 2", px: 110 },
+        { title: "수치", px: 60 },
+        { title: "배치 위치", px: 120 },
       ],
       rows,
       keys

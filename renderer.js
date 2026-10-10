@@ -61,6 +61,8 @@ const SECTION_SUBS = {
     if (getReviewParagraphs(state).length) nodes.push({ title: "평가", children: [], key: "review" });
     return nodes;
   },
+  // 알고리즘 배치가 있으면 4.1 추천 조합 / 4.2 알고리즘 배치 (없으면 하위 문단 없이 기존 표만)
+  algorithm: (state) => (hasBoardContent(state) ? [{ title: "추천 조합", key: "recommend" }, { title: "알고리즘 배치", key: "board" }] : []),
   // 8.1 스킨(항상) + 8.2 일러스트(내용 있는 부분만, 없는 칸은 빠지고 번호 당김)
   skin: (state) => {
     const nodes = [{ title: "스킨", children: getSkinItems(state).map((item) => item.headingText) }];
@@ -635,7 +637,7 @@ const SECTION_BODY = {
 
   intimacy: (state) => renderIntimacy(state),
 
-  algorithm: (state) => renderAlgorithm(state),
+  algorithm: (state, section) => renderAlgorithm(state, section),
 
   story: (state) => renderStory(state),
 
@@ -1489,9 +1491,9 @@ const ALGORITHM_ZONES = ["offense", "stability", "special"];
 
 // 능력치 아이콘 + 이름 (수치 없음)
 function optionChip(key) {
-  const url = getIconUrl("attribute", key);
+  const url = getIconUrl("attribute", getOptionBase(key));
   const icon = url ? `<span style="${S.optionIcon}">${img(url, "", S.optionIconImg)}</span>` : "";
-  return `<span style="${S.optionChip}">${icon}${esc(getLabel("attribute", key))}</span>`;
+  return `<span style="${S.optionChip}">${icon}${esc(getOptionLabel(key))}</span>`;
 }
 
 // 구역 표
@@ -1502,7 +1504,7 @@ function renderAlgorithmZone(type, zone) {
   const allowedMain = getAllowedOptions(type, "main");
   const allowedSub = getAllowedOptions(type, "sub");
   const pick = (list, allowed) =>
-    [...new Set((Array.isArray(list) ? list : []).filter((key) => key && allowed.includes(key) && getItem("attribute", key)))];
+    [...new Set((Array.isArray(list) ? list : []).filter((key) => key && allowed.includes(key) && getItem("attribute", getOptionBase(key))))];
 
   const sharedMain = pick(zone.main, allowedMain);
   const sharedSub = pick(zone.sub, allowedSub);
@@ -1548,8 +1550,408 @@ function renderAlgorithmZone(type, zone) {
 </div>`;
 }
 
-function renderAlgorithm(state) {
-  return `<div class="pncwiki-algorithm">${ALGORITHM_ZONES.map((type) => renderAlgorithmZone(type, state.algorithm[type])).join("")}</div>`;
+function renderAlgorithm(state, section) {
+  const zones = `<div class="pncwiki-algorithm">${ALGORITHM_ZONES.map((type) => renderAlgorithmZone(type, state.algorithm[type])).join("")}</div>`;
+  if (!section || !section.subs.length) return zones;
+  const [rec, board] = section.subs;
+  return `
+<details class="pncwiki-algo-group" id="${rec.anchor}" open style="${S.skinFold}"${cap("algo-recommend", "algorithm", "추천알고리즘_추천조합")}>
+  ${foldHeading(rec)}
+  ${zones}
+</details>
+<details class="pncwiki-algo-group" id="${board.anchor}" open style="${S.skinFold}"${boardUsesFolds(state) ? "" : cap("algo-board", "algorithm", "추천알고리즘_알고리즘배치")}>
+  ${foldHeading(board)}
+  ${renderAlgorithmBoard(state)}
+</details>`;
+}
+
+/* ---------- 4.2 알고리즘 배치 (시뮬레이션) ---------- */
+// 판 모양은 프로필 클래스, 2칸 조각은 추천 알고리즘에서 연결, 1칸은 state.algorithm.board.presets[n].singles
+// 주황 고정 수치 (GAME_DATA.algorithmMain / algorithmSub)
+
+const BOARD_ORANGE = "#f08a1e";
+const BOARD_SET_ON = "#3f8f3f";
+const BOARD_SET_OFF = "#8a8f98";
+
+function boardOptionBase(key) {
+  return String(key || "").replace(/%$/, "");
+}
+
+function boardIsPercent(key) {
+  return /%$/.test(key) || GAME_DATA.percentStats.includes(key);
+}
+
+function boardOptionLabel(key) {
+  return getOptionLabel(key);
+}
+
+function boardNumber(value) {
+  return String(Math.round(value * 100) / 100);
+}
+
+function boardValueText(key, value) {
+  return `${boardNumber(value)}${boardIsPercent(key) ? "%" : ""}`;
+}
+
+// 주 옵션 값 (cells: 1 | 2). 그 구간에 없는 옵션이면 null
+function boardMainValue(zone, key, cells) {
+  const row = (GAME_DATA.algorithmMain[zone] || []).find((r) => r[0] === key);
+  return row ? row[cells === 1 ? 1 : 2] : null;
+}
+
+function boardSubValue(zone, key) {
+  const list = GAME_DATA.algorithmSub.zones[zone] || [];
+  return list.includes(key) ? GAME_DATA.algorithmSub.values[key] : null;
+}
+
+// 같은 이름 최대 개수: 3세트 효과가 있으면 3, 2세트만 있으면 2
+function boardSetMax(key) {
+  const item = getItem("algorithm", key);
+  return item ? (item.set3 ? 3 : 2) : 0;
+}
+
+function getBoardShape(state, zone) {
+  const map = GAME_DATA.algorithmBoard.classes;
+  const cls = state && state.profile ? state.profile.class : "";
+  if (!Object.prototype.hasOwnProperty.call(map, cls)) return null;
+  return GAME_DATA.algorithmBoard.shapes[map[cls][zone]] || null;
+}
+
+function getBoardShapeName(state, zone) {
+  const map = GAME_DATA.algorithmBoard.classes;
+  const cls = state && state.profile ? state.profile.class : "";
+  return Object.prototype.hasOwnProperty.call(map, cls) ? map[cls][zone] : "";
+}
+
+function getBoardData(state) {
+  const algo = isObj(state.algorithm) ? state.algorithm : {};
+  return isObj(algo.board) ? algo.board : {};
+}
+
+// 배치 프리셋 목록 (항상 1개 이상). 1번 = 기본 배치(1 → 2 → 3순위 자동)
+//   mode: "auto" 기본 / "rank" n순위 배치(고른 순위 → 나머지 오름차순) / "custom" 커스텀(2칸 자리마다 추천 알고리즘 직접)
+const BOARD_PRESET_MAX = 5;
+
+function getBoardPresets(state) {
+  const board = getBoardData(state);
+  if (Array.isArray(board.presets) && board.presets.length) return board.presets.filter(isObj);
+  return [{ name: "", mode: "auto", rank: 1, pieces: {}, singles: isObj(board.singles) ? board.singles : {} }]; // 정리 전 옛 구조
+}
+
+function getBoardPreset(state, presetIndex = 0) {
+  const list = getBoardPresets(state);
+  return list[presetIndex] || list[0];
+}
+
+function boardPresetName(preset, index) {
+  const name = isObj(preset) && typeof preset.name === "string" ? preset.name.trim() : "";
+  return name || `추천 배치 ${index + 1}`;
+}
+
+// 추천 순위 후보 순서: 기본 1 → 2 → 3 / n순위 = 고른 순위 → 나머지 숫자 오름차순 (2 → 1 → 3, 3 → 1 → 2)
+function boardRankOrder(preset) {
+  const base = [0, 1, 2];
+  if (!isObj(preset) || preset.mode !== "rank") return base;
+  const first = [1, 2, 3].includes(preset.rank) ? preset.rank - 1 : 0;
+  return [first, ...base.filter((r) => r !== first)];
+}
+
+// 추천 칸 하나 → 조각 (옵션: 「따로 설정」이면 그 칸, 아니면 공통 주 옵션 1 + 공통 부 옵션 1·2. 공통 주 옵션 2는 추천 표에만)
+function boardPieceFromSlot(state, zone, rank) {
+  const rec = isObj(state.algorithm) && isObj(state.algorithm[zone]) ? state.algorithm[zone] : {};
+  const slot = Array.isArray(rec.slots) && isObj(rec.slots[rank]) ? rec.slots[rank] : null;
+  if (!slot) return null;
+  const item = getItem("algorithm", slot.key);
+  if (!item || item.type !== zone) return null;
+  const own = slot.custom === true;
+  const okMain = (k) => (boardMainValue(zone, k, 2) != null ? k : "");
+  const okSub = (k) => (boardSubValue(zone, k) != null ? k : "");
+  const main = okMain(own ? slot.main : Array.isArray(rec.main) ? rec.main[0] : "");
+  const subsSrc = own ? (Array.isArray(slot.sub) ? slot.sub : []) : Array.isArray(rec.sub) ? rec.sub : [];
+  return { key: slot.key, main, subs: [0, 1].map((j) => okSub(subsSrc[j])), index: rank, rank };
+}
+
+// 그 구간 추천 알고리즘 (순위 순서, 같은 이름은 처음 것만) → [{ key, rank }]
+function boardRecommended(state, zone) {
+  const rec = isObj(state.algorithm) && isObj(state.algorithm[zone]) ? state.algorithm[zone] : {};
+  const slots = Array.isArray(rec.slots) ? rec.slots : [];
+  const out = [];
+  slots.forEach((slot, rank) => {
+    if (!isObj(slot) || out.some((x) => x.key === slot.key)) return;
+    const item = getItem("algorithm", slot.key);
+    if (item && item.type === zone) out.push({ key: slot.key, rank });
+  });
+  return out;
+}
+
+// 추천 알고리즘 → 판 연결 (기본·n순위). 후보 순서대로
+//   들어갈 개수 = min(최대 개수(3세트 3 / 2세트 2), 남은 2칸 자리). 남은 자리가 2개 미만이면 넣지 않음 (1개짜리는 세트가 없으므로 1칸에게 넘김)
+// → 2칸 자리 순서대로 조각 (빈 자리는 null)
+function getBoardPieces(state, zone, pairCount, preset) {
+  const recs = boardRecommended(state, zone);
+  const pieces = [];
+  boardRankOrder(preset).forEach((rank) => {
+    const found = recs.find((x) => x.rank === rank);
+    if (!found) return;
+    const room = pairCount - pieces.length;
+    if (room < 2) return;
+    const piece = boardPieceFromSlot(state, zone, rank);
+    const count = Math.min(boardSetMax(found.key), room);
+    for (let n = 0; n < count; n += 1) pieces.push({ ...piece });
+  });
+  return pieces;
+}
+
+// 커스텀: 2칸 자리마다 고른 알고리즘. 추천에서 빠진 알고리즘·최대 개수를 넘는 것은 빈 자리 (missing에 표시)
+function getBoardCustomPieces(state, zone, pairCount, preset) {
+  const picks = isObj(preset.pieces) && Array.isArray(preset.pieces[zone]) ? preset.pieces[zone] : [];
+  const recs = boardRecommended(state, zone);
+  const counts = {};
+  const missing = [];
+  const seats = [];
+  for (let i = 0; i < pairCount; i += 1) {
+    const key = typeof picks[i] === "string" ? picks[i] : "";
+    const found = key && recs.find((x) => x.key === key);
+    if (key && !found) missing.push(i);
+    if (!found || (counts[key] || 0) >= boardSetMax(key)) {
+      seats.push(null);
+      continue;
+    }
+    counts[key] = (counts[key] || 0) + 1;
+    seats.push(boardPieceFromSlot(state, zone, found.rank));
+  }
+  return { seats, missing };
+}
+
+// 구간 하나의 배치 결과 (presetIndex: 배치 프리셋 번호, 기본 0)
+function getBoardPlacement(state, zone, presetIndex = 0) {
+  const shape = getBoardShape(state, zone);
+  if (!shape) return null;
+  const preset = getBoardPreset(state, presetIndex);
+  let seats;
+  let missing = [];
+  if (preset.mode === "custom") ({ seats, missing } = getBoardCustomPieces(state, zone, shape.pairs.length, preset));
+  else seats = getBoardPieces(state, zone, shape.pairs.length, preset);
+  const placed = [];
+  seats.forEach((p, i) => {
+    if (p) placed.push({ ...p, seat: i, row: shape.pairs[i][0], col: shape.pairs[i][1] });
+  });
+  const used = new Set();
+  placed.forEach((p) => {
+    used.add(`${p.row},${p.col}`);
+    used.add(`${p.row + 1},${p.col}`);
+  });
+  const leftovers = shape.open
+    .filter(([r, c]) => !used.has(`${r},${c}`))
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const singlesRaw = isObj(preset.singles) && Array.isArray(preset.singles[zone]) ? preset.singles[zone] : [];
+  const singles = leftovers.map(([row, col], i) => {
+    const s = isObj(singlesRaw[i]) ? singlesRaw[i] : {};
+    const main = boardMainValue(zone, s.main, 1) != null ? s.main : "";
+    return { row, col, index: i, main, sub: main && boardSubValue(zone, s.sub) != null ? s.sub : "" };
+  });
+  const placedCounts = {};
+  placed.forEach((p) => {
+    placedCounts[p.key] = (placedCounts[p.key] || 0) + 1;
+  });
+  const sets = Object.keys(placedCounts).map((key) => {
+    const item = getItem("algorithm", key);
+    return { key, item, count: placedCounts[key], on2: placedCounts[key] >= 2, on3: Boolean(item.set3) && placedCounts[key] >= 3 };
+  });
+  return { zone, shape, preset: presetIndex, placed, overflow: [], missing, leftovers, singles, sets };
+}
+
+// 배치 하나에 판에 놓인 것이 있는지
+function boardPresetHasContent(state, presetIndex) {
+  return ALGORITHM_ZONES.some((zone) => {
+    const pl = getBoardPlacement(state, zone, presetIndex);
+    return pl && (pl.placed.length || pl.singles.some((s) => s.main));
+  });
+}
+
+// 문서에 나오는 배치 번호들 (놓인 것이 있는 배치만)
+function boardShownPresets(state) {
+  return getBoardPresets(state).map((_, i) => i).filter((i) => boardPresetHasContent(state, i));
+}
+
+// 배치가 2개 이상이면 배치마다 접기
+function boardUsesFolds(state) {
+  return getBoardPresets(state).length > 1;
+}
+
+// 문서 4.2 출력 조건: 「알고리즘 배치 문서에 넣기」 켬 + 클래스 + 어느 배치든 판에 하나라도 놓임
+function hasBoardContent(state) {
+  if (isObj(state.sections) && state.sections.algoBoard === false) return false;
+  return boardShownPresets(state).length > 0;
+}
+
+// 장착 알고리즘으로 얻는 능력치 합계 (고정값·% 따로, 0은 빼고, 능력치 표 순서)
+function getBoardTotals(placements) {
+  const sum = {};
+  const add = (key, value) => {
+    if (!key || value == null) return;
+    sum[key] = (sum[key] || 0) + value;
+  };
+  placements.forEach((pl) => {
+    pl.placed.forEach((p) => {
+      add(p.main, boardMainValue(pl.zone, p.main, 2));
+      (Array.isArray(p.subs) ? p.subs : []).forEach((sub) => add(sub, boardSubValue(pl.zone, sub)));
+    });
+    pl.singles.forEach((s) => {
+      if (!s.main) return;
+      add(s.main, boardMainValue(pl.zone, s.main, 1));
+      add(s.sub, boardSubValue(pl.zone, s.sub));
+    });
+  });
+  const order = Object.keys(GAME_DATA.attribute);
+  return Object.keys(sum)
+    .filter((key) => Math.abs(sum[key]) > 1e-9)
+    .sort((a, b) => order.indexOf(boardOptionBase(a)) - order.indexOf(boardOptionBase(b)) || (/%$/.test(a) ? 1 : 0) - (/%$/.test(b) ? 1 : 0))
+    .map((key) => ({ key, value: sum[key] }));
+}
+
+function boardStatIcon(key, size) {
+  const url = getIconUrl("attribute", boardOptionBase(key));
+  return url
+    ? `<span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${size}px;height:${size}px;background:${C.infoIconBg};border-radius:4px;">${img(url, "", `display:block;width:${size - 4}px;height:${size - 4}px;margin:0;border:0;object-fit:contain;`)}</span>`
+    : "";
+}
+
+function boardDots(count) {
+  return `<span style="display:inline-flex;gap:3px;">${Array.from({ length: count }, () => `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${BOARD_ORANGE};"></span>`).join("")}</span>`;
+}
+
+// 판의 조각 카드 (게임처럼 밝은 카드 — 글자색은 밝기 테마 변환 대상이 아닌 색으로 고정)
+function boardTile(zone, piece, cells) {
+  const type = GAME_DATA.algorithmType[zone];
+  const item = cells === 2 ? getItem("algorithm", piece.key) : null;
+  const value = boardMainValue(zone, piece.main, cells);
+  const main = value != null ? `<div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:15px;font-weight:700;line-height:1.2;color:#1c1c1c;">${boardStatIcon(piece.main, 18)}<span>${esc(boardValueText(piece.main, value))}</span></div>` : "";
+  const name = cells === 2 ? item.label : boardOptionLabel(piece.main);
+  const icon =
+    cells === 2 && getIconUrl("algorithm", piece.key)
+      ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0 auto 6px;background:${type.accent};border-radius:6px;">${img(getIconUrl("algorithm", piece.key), item.label, "display:block;width:38px;height:38px;margin:0;border:0;object-fit:contain;")}</span>`
+      : "";
+  return `<div style="grid-row:${piece.row + 1} / span ${cells};grid-column:${piece.col + 1};box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;padding:4px 3px;border-top:4px solid ${BOARD_ORANGE};border-bottom:4px solid ${BOARD_ORANGE};background:#f4f4f4;color:#1c1c1c;text-align:center;">${icon}${main}<div style="max-width:100%;font-size:11px;line-height:1.3;color:#333333;overflow-wrap:anywhere;">${esc(name)}</div>${boardDots(cells === 2 ? 2 : 1)}</div>`;
+}
+
+function renderBoardZone(pl) {
+  const type = GAME_DATA.algorithmType[pl.zone];
+  const open = new Set(pl.shape.open.map(([r, c]) => `${r},${c}`));
+  const covered = new Set();
+  const tiles = [];
+  pl.placed.forEach((p) => {
+    covered.add(`${p.row},${p.col}`);
+    covered.add(`${p.row + 1},${p.col}`);
+    tiles.push(boardTile(pl.zone, p, 2));
+  });
+  pl.singles.forEach((s) => {
+    if (!s.main) return;
+    covered.add(`${s.row},${s.col}`);
+    tiles.push(boardTile(pl.zone, s, 1));
+  });
+  const cells = [];
+  for (let r = 0; r < GAME_DATA.algorithmBoard.rows; r += 1) {
+    for (let c = 0; c < GAME_DATA.algorithmBoard.cols; c += 1) {
+      const k = `${r},${c}`;
+      if (covered.has(k)) continue;
+      cells.push(
+        open.has(k)
+          ? `<div style="grid-row:${r + 1};grid-column:${c + 1};box-sizing:border-box;border:1px solid #5a5e66;background:#3a3d44;"></div>`
+          : `<div style="grid-row:${r + 1};grid-column:${c + 1};box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1px solid #45484f;background:#1f2126;color:#5a5e66;font-size:22px;line-height:1;">✕</div>`
+      );
+    }
+  }
+  return `<div class="pncwiki-board-zone" style="box-sizing:border-box;flex:1 1 200px;max-width:240px;min-width:0;background:#2b2d33;border:1px solid #45484f;">
+  <div style="padding:5px;background:${type.accent};color:#ffffff;font-size:14px;font-weight:700;text-align:center;">${esc(type.label)}</div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(${GAME_DATA.algorithmBoard.rows},74px);gap:4px;padding:6px;">${cells.join("")}${tiles.join("")}</div>
+</div>`;
+}
+
+// 게임 상세 카드 모양: 이름 + 구간 / 주황 띠 주 옵션 / 부가 옵션 / 세트 효과
+function boardDetailCard(pl, piece, cells) {
+  const type = GAME_DATA.algorithmType[pl.zone];
+  const item = cells === 2 ? getItem("algorithm", piece.key) : null;
+  const name = cells === 2 ? item.label : boardOptionLabel(piece.main);
+  const mainValue = boardMainValue(pl.zone, piece.main, cells);
+  const subs = cells === 2 ? (Array.isArray(piece.subs) ? piece.subs : []) : [piece.sub];
+  const subRows = subs
+    .map((sub) => {
+      const v = boardSubValue(pl.zone, sub);
+      if (v == null) return `<div style="padding:5px 10px;background:#2b2d33;color:#8a8f98;font-size:13px;">(부가 옵션 없음)</div>`;
+      return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:#2b2d33;color:#ffffff;font-size:13px;">${boardStatIcon(sub, 18)}<span style="flex:1;">${esc(boardOptionLabel(sub))}</span><span style="color:#ffb04d;font-weight:700;">+${esc(boardValueText(sub, v))}</span></div>`;
+    })
+    .join("");
+  const set = cells === 2 ? pl.sets.find((x) => x.key === piece.key) : null;
+  const setRow = (label, on, text) =>
+    `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12px;line-height:1.6;"><span style="flex-shrink:0;padding:0 6px;border-radius:3px;background:${on ? BOARD_SET_ON : BOARD_SET_OFF};color:#ffffff;font-weight:700;">${label}</span><span style="color:${on ? C.infoText : C.subText};">${esc(text)}</span></div>`;
+  const sets = item ? `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;">${setRow("2세트", set && set.on2, item.set2 || "")}${item.set3 ? setRow("3세트", set && set.on3, item.set3) : ""}</div>` : "";
+  return `<div style="box-sizing:border-box;min-width:0;border:1px solid ${C.cardBorder};border-bottom:4px solid ${BOARD_ORANGE};background:${C.white};color:${C.infoText};">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px 6px;"><span style="font-size:15px;font-weight:700;">${esc(name)}</span><span style="flex-shrink:0;padding:0 6px;background:${C.algoHead};color:#ffffff;font-size:11px;">${esc(type.label)}</span></div>
+  <div style="display:flex;align-items:center;gap:6px;margin:0 10px 6px;padding:6px 8px;background:${BOARD_ORANGE};color:#ffffff;font-weight:700;">${boardStatIcon(piece.main, 20)}<span style="flex:1;">${esc(boardOptionLabel(piece.main))}</span><span>${mainValue != null ? esc(boardValueText(piece.main, mainValue)) : "-"}</span></div>
+  <div style="display:flex;flex-direction:column;gap:2px;margin:0 10px;">${subRows}</div>
+  ${sets || `<div style="height:8px;"></div>`}
+</div>`;
+}
+
+function boardBar(title) {
+  return `<div style="margin:18px 0 8px;padding:6px 10px;background:${C.algoHead};color:#ffffff;font-weight:700;">${esc(title)}</div>`;
+}
+
+// 4.2 전체: 배치가 하나면 그대로, 2개 이상이면 배치마다 접기 (첫 배치만 펼침, 제목 = 배치 이름, 이미지 저장은 배치마다 한 장)
+function renderAlgorithmBoard(state) {
+  const shown = boardShownPresets(state);
+  if (!boardUsesFolds(state)) return shown.length ? renderBoardPresetBody(state, shown[0]) : "";
+  const presets = getBoardPresets(state);
+  return shown
+    .map((i, n) => {
+      const name = boardPresetName(presets[i], i);
+      return `<details class="pncwiki-board-preset"${n === 0 ? " open" : ""} style="${S.skinFold}"${cap(`algo-board-${i + 1}`, "algorithm", `알고리즘배치_${name}`)}>
+  <summary class="pncwiki-subheading" style="${S.skinSummary}${S.subHeading}font-size:17px;"><span style="${S.subHeadingArrow}">${foldArrow(7)}</span>${esc(name)}</summary>
+  ${renderBoardPresetBody(state, i)}
+</details>`;
+    })
+    .join("");
+}
+
+function renderBoardPresetBody(state, presetIndex) {
+  const placements = ALGORITHM_ZONES.map((zone) => getBoardPlacement(state, zone, presetIndex)).filter(Boolean);
+  if (!placements.length) return "";
+  const boardHtml = `<div class="pncwiki-board" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:740px;margin:0 auto;">${placements.map(renderBoardZone).join("")}</div>`;
+  const cards = [];
+  placements.forEach((pl) => {
+    pl.placed.forEach((p) => cards.push(boardDetailCard(pl, p, 2)));
+    pl.singles.forEach((s) => {
+      if (s.main) cards.push(boardDetailCard(pl, s, 1));
+    });
+  });
+  const details = cards.length
+    ? `<details class="pncwiki-board-detail" open style="display:block;margin:16px 0 0;"><summary style="${S.skinSummary}${S.storySummary}">[ 알고리즘 상세 ]</summary><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:10px;">${cards.join("")}</div></details>`
+    : "";
+  const totals = getBoardTotals(placements);
+  const totalHtml = totals.length
+    ? `${boardBar("기본 능력")}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;">${totals
+        .map(
+          (t) =>
+            `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${C.soft};border:1px solid ${C.border};">${boardStatIcon(t.key, 22)}<span style="flex:1;font-weight:700;">${esc(boardOptionLabel(t.key))}</span><span style="font-weight:700;">+${esc(boardValueText(t.key, t.value))}</span></div>`
+        )
+        .join("")}</div>`
+    : "";
+  const allSets = [];
+  placements.forEach((pl) => pl.sets.forEach((set) => allSets.push({ ...set, zone: pl.zone })));
+  const badge = (label, on) => `<span style="display:inline-block;padding:1px 10px;border-radius:3px;background:${on ? BOARD_SET_ON : BOARD_SET_OFF};color:#ffffff;font-size:12px;font-weight:700;">${label}</span>`;
+  const setHtml = allSets.length
+    ? `${boardBar("알고리즘 세트")}<div style="display:flex;flex-direction:column;gap:8px;">${allSets
+        .map((set) => {
+          const type = GAME_DATA.algorithmType[set.zone];
+          const url = getIconUrl("algorithm", set.key);
+          const icon = url ? `<span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:48px;height:48px;background:${type.accent};border-radius:6px;">${img(url, set.item.label, "display:block;width:42px;height:42px;margin:0;border:0;object-fit:contain;")}</span>` : "";
+          const effects = [set.on2 ? `<div><b>2세트</b> ${esc(set.item.set2 || "")}</div>` : "", set.on3 ? `<div><b>3세트</b> ${esc(set.item.set3)}</div>` : ""].join("");
+          return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid ${C.border};background:${C.white};">${icon}<div style="flex:1;min-width:0;"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 4px;"><b style="font-size:15px;">${esc(set.item.label)}</b>${badge("2세트", set.on2)}${set.item.set3 ? badge("3세트", set.on3) : ""}</div><div style="font-size:13px;line-height:1.6;overflow-wrap:anywhere;">${effects || `<span style="color:${C.subText};">켜진 세트 효과 없음</span>`}</div></div></div>`;
+        })
+        .join("")}</div>`
+    : "";
+  return `${boardHtml}${details}${totalHtml}${setHtml}`;
 }
 
 /* ---------- 친밀도 ---------- */
@@ -1670,7 +2072,7 @@ const SECTION_CAPTURE = {
 
 function renderSection(state, section) {
   const body = SECTION_BODY[section.key] ? SECTION_BODY[section.key](state, section) : "";
-  const capAttr = SECTION_CAPTURE[section.key] && body.trim() ? cap(section.key, section.key, SECTION_CAPTURE[section.key]) : "";
+  const capAttr = SECTION_CAPTURE[section.key] && body.trim() && !(section.key === "algorithm" && section.subs.length) ? cap(section.key, section.key, SECTION_CAPTURE[section.key]) : "";
   return part(
     section.key,
     `<details class="pncwiki-section" id="${sectionAnchor(section.key)}" open style="${S.section}display:block;"${capAttr}>${renderHeading(section)}${body}</details>`

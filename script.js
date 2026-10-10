@@ -18,6 +18,7 @@ const ALGORITHM_SLOTS = 3; // 구역당 추천 알고리즘 칸 수
 const ALGORITHM_SUBS = 2; // 알고리즘 하나의 부 옵션 수 (게임 기준 최대 2)
 const ALGORITHM_SHARED_MAINS = 2; // 구역 공통 주 옵션 수 (추천은 최대 2개까지)
 const ALGORITHM_TYPES = ["offense", "stability", "special"];
+const BOARD_NAME_MAX = 30; // 알고리즘 배치 이름 최대 글자 수
 
 // custom: false면 구역 공통 옵션을 따르고, true면 이 칸의 main/sub를 쓴다
 function emptyAlgorithmSlot() {
@@ -125,6 +126,17 @@ const DEFAULT_STATE = {
     stability: emptyAlgorithmZone(),
     special: emptyAlgorithmZone(),
     // slot = { key: 알고리즘 키, main: 주 옵션 attribute 키, sub: [부 옵션1, 부 옵션2] } ("" = 미선택)
+    // 알고리즘 배치 (시뮬레이션, 주황 고정 수치): 2칸 세트 조각은 위 추천 알고리즘에서 연결 (옵션도 추천 설정 그대로)
+    //   presets = 배치 여러 개 (최대 5, 1번 = 기본 배치, 항상 있음)
+    //     { name, mode: "auto"(기본 1→2→3순위) | "rank"(rank 순위 먼저 → 나머지 오름차순) | "custom"(pieces = 구간별 2칸 자리마다 추천 알고리즘 키),
+    //       rank, pieces: { offense: [], stability: [], special: [] }, singles: { 구간: [{ main, sub }] } }
+    //   singles = 세트가 쓰고 남은 칸에 넣는 1칸 — 남은 칸 순서(위→아래, 왼→오)대로. 칸이 줄면 남는 것은 숨김 보관
+    //   옵션 키 끝 % = 퍼센트 옵션 (예: "atk%")
+    //   singles(바깥) = 예전 파일의 1칸 → 불러올 때 presets[0].singles로 옮김
+    board: {
+      presets: [],
+      singles: { offense: [], stability: [], special: [] },
+    },
   },
   // 친밀도: 고른 키만 저장. 수치·문장·이미지·등급은 GAME_DATA에서 가져옴
   intimacy: {
@@ -192,6 +204,7 @@ const DEFAULT_STATE = {
   sections: {
     weapon: true,
     history: true,
+    algoBoard: true, // 문서에 4.2 알고리즘 배치 넣기 (출력만 제어)
   },
 };
 
@@ -497,6 +510,8 @@ function normalizeState(st) {
     };
   });
 
+  normalizeBoard(st);
+
   const like = unique(st.intimacy.gifts.like);
   st.intimacy.gifts.like = like;
   st.intimacy.gifts.hate = unique(st.intimacy.gifts.hate).filter((key) => !like.includes(key));
@@ -548,6 +563,52 @@ function normalizeState(st) {
     if (group.source) usedSources.add(group.source);
   });
   return st;
+}
+
+// 알고리즘 배치 정리
+function emptyBoardZones() {
+  return { offense: [], stability: [], special: [] };
+}
+
+function newBoardPreset(mode, name) {
+  return { name, mode, rank: mode === "rank" ? 2 : 1, pieces: emptyBoardZones(), singles: emptyBoardZones() };
+}
+
+function normalizeBoard(st) {
+  const algo = st.algorithm;
+  const raw = isPlainObject(algo.board) ? algo.board : {};
+  // 예전 파일: 바깥 singles 하나 → 기본 배치의 1칸으로 (예전 구간별 2칸 직접 입력 목록은 더 쓰지 않아 버림)
+  const list = Array.isArray(raw.presets) && raw.presets.some(isPlainObject) ? raw.presets.filter(isPlainObject) : [{ singles: raw.singles }];
+  const presets = list.slice(0, BOARD_PRESET_MAX).map((p, i) => {
+    const mode = i === 0 ? "auto" : ["rank", "custom"].includes(p.mode) ? p.mode : "rank";
+    const rank = [1, 2, 3].includes(p.rank) ? p.rank : mode === "rank" ? 2 : 1;
+    const name = typeof p.name === "string" ? p.name.slice(0, BOARD_NAME_MAX) : `추천 배치 ${i + 1}`;
+    const piecesRaw = isPlainObject(p.pieces) ? p.pieces : {};
+    const singlesRaw = isPlainObject(p.singles) ? p.singles : {};
+    const pieces = emptyBoardZones();
+    const singles = emptyBoardZones();
+    ALGORITHM_TYPES.forEach((zone) => {
+      // 커스텀 2칸 자리: 그 구간 알고리즘만, 같은 이름은 최대 개수(3세트 3 / 2세트 2)까지. 추천에서 빠진 것은 지우지 않고 둠 (판에서는 빈 자리)
+      const counts = {};
+      pieces[zone] = (Array.isArray(piecesRaw[zone]) ? piecesRaw[zone] : []).slice(0, 3).map((key) => {
+        const item = typeof key === "string" ? getItem("algorithm", key) : null;
+        if (!item || item.type !== zone) return "";
+        counts[key] = (counts[key] || 0) + 1;
+        return counts[key] > boardSetMax(key) ? "" : key;
+      });
+      // 1칸: 그 구간 옵션만, 같은 구간 안 같은 주 옵션이면 뒤쪽 비움
+      const used = new Set();
+      singles[zone] = (Array.isArray(singlesRaw[zone]) ? singlesRaw[zone] : []).slice(0, 8).map((s) => {
+        const o = isPlainObject(s) ? s : {};
+        let main = boardMainValue(zone, o.main, 1) != null ? o.main : "";
+        if (main && used.has(main)) main = "";
+        if (main) used.add(main);
+        return { main, sub: boardSubValue(zone, o.sub) != null ? o.sub : "" };
+      });
+    });
+    return { name, mode, rank, pieces, singles };
+  });
+  algo.board = { presets };
 }
 
 /* ---------- 4. 저장 ---------- */
@@ -782,8 +843,8 @@ function buildAlgorithmPicker() {
     zone.appendChild(title);
 
     const algoOptions = getAlgorithmsOfType(type).map((key) => [key, getLabel("algorithm", key)]);
-    const mainOptions = getAllowedOptions(type, "main").map((key) => [key, getLabel("attribute", key)]);
-    const subOptions = getAllowedOptions(type, "sub").map((key) => [key, getLabel("attribute", key)]);
+    const mainOptions = getAllowedOptions(type, "main").map((key) => [key, getOptionLabel(key)]);
+    const subOptions = getAllowedOptions(type, "sub").map((key) => [key, getOptionLabel(key)]);
 
     // 구역 공통 옵션 (기본: 이 구역 알고리즘 전부에 적용)
     const shared = document.createElement("div");
@@ -849,6 +910,17 @@ function buildAlgorithmPicker() {
       zone.appendChild(card);
     }
 
+    // 이 구간 판 미리보기 (추천 알고리즘이 그대로 판에 놓인 모습)
+    const preview = document.createElement("div");
+    preview.className = "board-preview-wrap";
+    const previewTitle = document.createElement("div");
+    previewTitle.className = "algo-shared-title";
+    previewTitle.textContent = "판 미리보기 (1순위부터 자동 배치)";
+    const previewBox = document.createElement("div");
+    previewBox.className = "board-preview";
+    previewBox.dataset.boardPreview = type;
+    preview.append(previewTitle, previewBox);
+    zone.appendChild(preview);
     box.appendChild(zone);
   });
 }
@@ -1073,6 +1145,12 @@ function fillForm() {
 // 폼 → state (입력할 때마다)
 function handleInput(event) {
   const el = event.target;
+
+  // 알고리즘 배치 선택칸
+  if (el.dataset && el.dataset.boardField) {
+    handleBoardInput(el);
+    return;
+  }
 
   // 포지션 복수 선택 (data-field가 아닌 별도 처리)
   if (el.dataset && el.dataset.position) {
@@ -3201,6 +3279,8 @@ function render() {
   if (typeof markEditing === "function" && editingTarget) markEditing(false); // 폰·패드: 쓰는 칸 표시 유지
   refreshVoiceSkinSelects(); // 스킨 이름·보이스 체크가 바뀌면 보이스 세트 선택지도 따라감
   refreshExprSourceSelects();
+  if (boardClassDrawn !== boardDrawKey()) drawBoardEditor(); // 클래스나 남은 칸 수가 바뀌면 판·입력 다시
+  else fillBoardPreviews();
   ["voice.sets", "expression.groups"].forEach((path) => getList(path).forEach((item, i) => {
     const title = document.querySelector(`[data-list-title="${path}.${i}"]`);
     if (title) title.textContent = listCardTitle(LIST_DEFS[path], item, i);
@@ -3222,9 +3302,413 @@ function getPreviewParts() {
   return [...previewEl.querySelectorAll("[data-part]")];
 }
 
+/* ---------- 5-x. 알고리즘 배치 입력 ---------- */
+// 2칸 세트 조각은 추천 알고리즘에서 연결 → 추천 알고리즘 구간마다 기본 배치(1번) 판 미리보기
+// 「알고리즘 배치」 페이지: 배치(프리셋) 여러 개. 하나씩 쓰기에서는 배치 하나 = 페이지 하나
+//   배치마다 이름 / 종류(기본·n순위·커스텀) / 판 미리보기 / 남은 칸의 1칸 (칸마다 주 옵션 1 + 부가 옵션 1)
+// 클래스를 고르기 전에는 입력을 막음 (판 모양이 클래스로 정해지므로)
+
+const BOARD_POS = ["왼", "오"];
+let boardClassDrawn = null;
+
+function boardZoneLabel(zone) {
+  return GAME_DATA.algorithmType[zone].label;
+}
+
+function boardSelect(field, options, value, { empty = "선택 안 함", disabled = false } = {}) {
+  const sel = document.createElement("select");
+  sel.dataset.boardField = field;
+  sel.disabled = disabled;
+  const first = document.createElement("option");
+  first.value = "";
+  first.textContent = empty;
+  sel.appendChild(first);
+  options.forEach((opt) => {
+    if (opt.group) {
+      const g = document.createElement("optgroup");
+      g.label = opt.group;
+      opt.items.forEach((it) => g.appendChild(boardOption(it)));
+      sel.appendChild(g);
+    } else sel.appendChild(boardOption(opt));
+  });
+  sel.value = value || "";
+  return sel;
+}
+
+function boardOption({ value, label, disabled }) {
+  const o = document.createElement("option");
+  o.value = value;
+  o.textContent = label;
+  o.disabled = Boolean(disabled);
+  return o;
+}
+
+function boardField(label, control) {
+  const wrap = document.createElement("label");
+  wrap.className = "list-field";
+  wrap.append(document.createTextNode(label), control);
+  return wrap;
+}
+
+function boardHint(text, kind = "") {
+  const div = document.createElement("div");
+  div.className = `list-hint${kind ? ` is-${kind}` : ""}`;
+  div.textContent = text;
+  return div;
+}
+
+function boardPreview(zone, presetIndex = 0, mini = false) {
+  const div = document.createElement("div");
+  div.className = `board-preview${mini ? " is-mini" : ""}`;
+  div.dataset.boardPreview = zone;
+  div.dataset.boardPreset = String(presetIndex);
+  return div;
+}
+
+function boardButton(text, action, index, { title = "", kind = "" } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `list-btn${kind ? ` ${kind}` : ""}`;
+  button.textContent = text;
+  if (title) button.title = title;
+  button.dataset.boardAction = action;
+  if (index !== undefined) button.dataset.boardIndex = String(index);
+  return button;
+}
+
+function boardPresetKindText(preset) {
+  if (preset.mode === "custom") return "커스텀 배치 · 자리마다 직접";
+  if (preset.mode === "rank") return `${preset.rank}순위 배치 · ${boardRankOrder(preset).map((r) => r + 1).join(" → ")}순위`;
+  return "기본 배치 · 1 → 2 → 3순위";
+}
+
+// 새 배치 기본 이름: 쓰지 않은 가장 작은 「추천 배치 N」
+function boardNextName() {
+  const used = new Set(getBoardPresets(state).map((p, i) => boardPresetName(p, i)));
+  for (let n = 2; ; n += 1) if (!used.has(`추천 배치 ${n}`)) return `추천 배치 ${n}`;
+}
+
+// 맨 위 「+ 알고리즘 배치 추가」 (누르면 n순위 / 커스텀 두 버튼)
+let boardAddOpen = false;
+
+function buildBoardAddSection() {
+  const section = document.createElement("div");
+  section.className = "board-add";
+  section.dataset.boardSection = "add";
+  const full = getBoardPresets(state).length >= BOARD_PRESET_MAX;
+  const add = boardButton(full ? `배치는 ${BOARD_PRESET_MAX}개까지예요` : "+ 알고리즘 배치 추가", "open-add");
+  add.classList.add("list-add");
+  add.disabled = full;
+  add.setAttribute("aria-expanded", String(boardAddOpen && !full));
+  section.appendChild(add);
+  if (boardAddOpen && !full) {
+    const row = document.createElement("div");
+    row.className = "board-add-choices";
+    const choice = (action, title, desc) => {
+      const b = boardButton("", action);
+      b.classList.add("board-add-choice");
+      const t = document.createElement("b");
+      t.textContent = title;
+      const d = document.createElement("span");
+      d.textContent = desc;
+      b.append(t, d);
+      return b;
+    };
+    row.append(
+      choice("add-rank", "n순위 배치", "고른 순위를 먼저 넣고, 나머지 순위를 차례로"),
+      choice("add-custom", "커스텀 배치", "2칸 자리마다 추천 알고리즘을 직접 골라서")
+    );
+    section.appendChild(row);
+  }
+  return section;
+}
+
+// 커스텀: 구간마다 2칸 자리 선택칸 (선택지 = 그 구간 추천 알고리즘, 옵션은 추천 설정 그대로)
+function buildBoardCustomFields(section, i, preset) {
+  ALGORITHM_TYPES.forEach((zone) => {
+    const shape = getBoardShape(state, zone);
+    const pl = getBoardPlacement(state, zone, i);
+    const head = document.createElement("div");
+    head.className = "board-section-head";
+    head.textContent = `${boardZoneLabel(zone)} — 2칸 자리 ${shape.pairs.length}`;
+    section.appendChild(head);
+    const recs = boardRecommended(state, zone);
+    if (!recs.length) {
+      section.appendChild(boardHint("이 구간 추천 알고리즘에 고른 알고리즘이 없어요. 추천 알고리즘에서 먼저 골라 주세요."));
+      return;
+    }
+    const picks = preset.pieces[zone];
+    const body = document.createElement("div");
+    body.className = "board-seat-grid";
+    shape.pairs.forEach(([row, col], seat) => {
+      const own = picks[seat] || "";
+      const others = picks.filter((k, j) => j !== seat && j < shape.pairs.length);
+      const options = recs.map(({ key, rank }) => {
+        const item = getItem("algorithm", key);
+        return {
+          value: key,
+          label: `${rank + 1}순위 · ${item.label} (${item.set3 ? "3세트" : "2세트"})`,
+          disabled: key !== own && others.filter((k) => k === key).length >= boardSetMax(key),
+        };
+      });
+      if (own && !recs.some((x) => x.key === own)) options.push({ value: own, label: `${getItem("algorithm", own).label} (추천에서 빠짐)`, disabled: true });
+      body.appendChild(boardField(`자리 ${seat + 1} · ${BOARD_POS[col]}${row + 1}-${row + 2}`, boardSelect(`presets.${i}.pieces.${zone}.${seat}`, options, own, { empty: "비워 두기" })));
+    });
+    section.appendChild(body);
+    pl.missing.forEach((seat) => section.appendChild(boardHint(`자리 ${seat + 1}: 추천 알고리즘에서 빠진 알고리즘이라 비워 두었어요.`, "warn")));
+  });
+}
+
+// 1칸: 남은 칸이 있는 구간만 (없는 구간은 숨김, 숨겨 둔 1칸 설정이 있을 때만 한 줄 안내)
+function buildBoardSingles(section, i, preset) {
+  const placements = ALGORITHM_TYPES.map((zone) => getBoardPlacement(state, zone, i));
+  const open = placements.filter((pl) => pl.leftovers.length);
+  const title = document.createElement("div");
+  title.className = "board-sub-title";
+  title.textContent = "1칸 알고리즘";
+  section.appendChild(title);
+  if (open.length) {
+    section.appendChild(boardHint("세트 알고리즘을 놓고 남은 칸이 자동으로 나와요. 칸마다 주 옵션 1개 + 부가 옵션 1개 (같은 구간 안에서 같은 주 옵션은 한 번만). 비워 두면 판에서도 빈칸이에요."));
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "list-empty";
+    empty.textContent = "세트 알고리즘이 판을 다 채워서 1칸을 넣을 칸이 없어요.";
+    section.appendChild(empty);
+  }
+  placements.forEach((pl) => {
+    if (pl.leftovers.length) return;
+    const kept = preset.singles[pl.zone].filter((x) => x && x.main).length;
+    if (kept) section.appendChild(boardHint(`${boardZoneLabel(pl.zone)}: 남은 칸이 없어 1칸 설정 ${kept}개를 숨겨 두었어요. 칸이 다시 생기면 돌아와요.`));
+  });
+  open.forEach((pl) => {
+    const zone = pl.zone;
+    const head = document.createElement("div");
+    head.className = "board-section-head";
+    head.textContent = `${boardZoneLabel(zone)} — 남은 칸 ${pl.leftovers.length}`;
+    section.appendChild(head);
+    const stored = preset.singles[zone];
+    const usedMains = pl.singles.map((x) => x.main);
+    pl.singles.forEach((cell, k) => {
+      const own = stored[k] || { main: "", sub: "" };
+      const card = document.createElement("div");
+      card.className = "list-card board-piece";
+      const top = document.createElement("div");
+      top.className = "list-card-head";
+      const name = document.createElement("span");
+      name.className = "list-card-title";
+      name.textContent = `칸 ${k + 1} · ${BOARD_POS[cell.col]}${cell.row + 1}`;
+      top.appendChild(name);
+      const body = document.createElement("div");
+      body.className = "list-card-body list-field-row";
+      const mains = GAME_DATA.algorithmMain[zone].map(([key, v1]) => ({
+        value: key,
+        label: `${boardOptionLabel(key)}  ${boardValueText(key, v1)}`,
+        disabled: key !== own.main && usedMains.includes(key),
+      }));
+      const subs = GAME_DATA.algorithmSub.zones[zone].map((key) => ({ value: key, label: `${boardOptionLabel(key)}  +${boardValueText(key, GAME_DATA.algorithmSub.values[key])}` }));
+      body.append(
+        boardField("주 옵션", boardSelect(`presets.${i}.singles.${zone}.${k}.main`, mains, own.main, { empty: "비워 두기" })),
+        boardField("부가 옵션", boardSelect(`presets.${i}.singles.${zone}.${k}.sub`, subs, own.sub, { disabled: !own.main }))
+      );
+      card.append(top, body);
+      section.appendChild(card);
+    });
+    const hidden = stored.slice(pl.leftovers.length).filter((x) => x && x.main).length;
+    if (hidden) section.appendChild(boardHint(`칸이 줄어 1칸 설정 ${hidden}개를 숨겨 두었어요. 칸이 다시 생기면 돌아와요.`));
+  });
+}
+
+// 배치 하나
+function buildBoardPresetSection(i) {
+  const presets = getBoardPresets(state);
+  const preset = presets[i];
+  const section = document.createElement("div");
+  section.className = "board-section board-preset";
+  section.dataset.boardSection = `p${i}`;
+
+  const head = document.createElement("div");
+  head.className = "board-preset-head";
+  const kind = document.createElement("span");
+  kind.className = "board-preset-kind";
+  kind.textContent = `${i + 1}. ${boardPresetKindText(preset)}`;
+  head.appendChild(kind);
+  if (i > 0) {
+    const tools = document.createElement("span");
+    tools.className = "list-card-tools";
+    const up = boardButton("↑", "up", i, { title: "위로" });
+    const down = boardButton("↓", "down", i, { title: "아래로" });
+    up.disabled = i <= 1; // 1번 기본 배치는 맨 위 고정
+    down.disabled = i === presets.length - 1;
+    tools.append(up, down, boardButton("삭제", "remove", i, { title: "이 배치 삭제", kind: "danger" }));
+    head.appendChild(tools);
+  }
+  section.appendChild(head);
+
+  const name = document.createElement("input");
+  name.type = "text";
+  name.maxLength = BOARD_NAME_MAX;
+  name.value = preset.name;
+  name.placeholder = `추천 배치 ${i + 1}`;
+  name.dataset.boardField = `presets.${i}.name`;
+  section.appendChild(boardField("배치 이름 (문서에 나오는 제목)", name));
+
+  if (preset.mode === "rank") {
+    const ranks = [1, 2, 3].map((r) => ({ value: String(r), label: `${r}순위부터 (${boardRankOrder({ mode: "rank", rank: r }).map((x) => x + 1).join(" → ")})` }));
+    const sel = boardSelect(`presets.${i}.rank`, ranks, String(preset.rank));
+    sel.firstChild.remove(); // 비워 두기 없음
+    sel.value = String(preset.rank);
+    section.appendChild(boardField("먼저 넣을 순위 (세 구간 모두)", sel));
+  }
+
+  const pv = document.createElement("div");
+  pv.className = "board-preview-row";
+  ALGORITHM_TYPES.forEach((zone) => pv.appendChild(boardPreview(zone, i, true)));
+  section.appendChild(pv);
+
+  if (preset.mode === "custom") buildBoardCustomFields(section, i, preset);
+  buildBoardSingles(section, i, preset);
+  return section;
+}
+
+// 입력 화면을 다시 그려야 하는지: 클래스 + 배치 구성 + 추천 알고리즘 + 구간별 남은 칸 수 (이름·1칸 값은 빼고 → 이름 쓰는 중에 안 끊김)
+function boardDrawKey() {
+  if (!getBoardShape(state, "offense")) return `none:${state.profile.class}`;
+  const presets = getBoardPresets(state);
+  return JSON.stringify([
+    state.profile.class,
+    boardAddOpen,
+    ALGORITHM_TYPES.map((zone) => boardRecommended(state, zone).map((x) => x.key + x.rank)),
+    presets.map((p, i) => [p.mode, p.rank, p.pieces, ALGORITHM_TYPES.map((zone) => getBoardPlacement(state, zone, i).leftovers.length)]),
+  ]);
+}
+
+function drawBoardEditor() {
+  const box = document.getElementById("algoBoardEditor");
+  if (!box) return;
+  boardClassDrawn = boardDrawKey();
+  box.innerHTML = "";
+  if (!getBoardShape(state, "offense")) {
+    const note = document.createElement("div");
+    note.className = "list-empty board-lock";
+    note.textContent = "프로필에서 클래스를 먼저 골라 주세요.";
+    box.appendChild(note);
+    return;
+  }
+  box.appendChild(buildBoardAddSection());
+  getBoardPresets(state).forEach((_, i) => box.appendChild(buildBoardPresetSection(i)));
+  fillBoardPreviews();
+  applyBoardSections(editorPages[pageIndex] ? editorPages[pageIndex].sub || {} : {});
+}
+
+// 판 미리보기 (문서와 같은 그림을 작게). 클래스가 없으면 안내
+function fillBoardPreviews() {
+  document.querySelectorAll("[data-board-preview]").forEach((box) => {
+    const pl = getBoardPlacement(state, box.dataset.boardPreview, Number(box.dataset.boardPreset) || 0);
+    box.innerHTML = pl ? themePreviewHtml(renderBoardZone(pl)) : `<div class="list-empty board-lock">판 미리보기: 프로필에서 클래스를 먼저 골라 주세요.</div>`;
+  });
+}
+
+// 하나씩 쓰기: 지금 페이지의 배치만 (추가 버튼은 첫 배치 페이지 위쪽)
+function applyBoardSections(sub) {
+  const on = Boolean(sub && sub.kind === "board");
+  document.querySelectorAll("#algoBoardEditor [data-board-section]").forEach((el) => {
+    const mine = el.dataset.boardSection === "add" ? sub.index === 0 : el.dataset.boardSection === `p${sub.index}`;
+    el.classList.toggle("is-off-page", on && !mine);
+  });
+}
+
+function boardChanged() {
+  normalizeBoard(state);
+  saveToLocalStorage();
+  render();
+  drawBoardEditor();
+}
+
+// 배치 수·순서·이름이 바뀐 뒤: 페이지 목록 다시 + 그 배치로 이동
+function goBoardPreset(index) {
+  rebuildEditorPages();
+  const section = document.querySelector(`#algoBoardEditor [data-board-section="p${index}"]`);
+  if (writeMode === "split") {
+    const at = editorPages.findIndex((p) => p.id === `algo-board:p${index}`);
+    if (at > -1) showEditorPage(at, { scroll: true });
+  } else if (section) {
+    section.scrollIntoView({ block: "start" });
+  }
+}
+
+// 선택 바꾸기: presets.번호.name | rank | pieces.구간.자리 | singles.구간.칸.main|sub
+function handleBoardInput(el) {
+  const parts = el.dataset.boardField.split(".");
+  const preset = getBoardPresets(state)[Number(parts[1])];
+  if (!preset) return;
+  const field = parts[2];
+  if (field === "name") {
+    preset.name = el.value.slice(0, BOARD_NAME_MAX);
+    saveToLocalStorage();
+    render(); // 이름은 다시 그리지 않음 (쓰는 중) — 페이지 제목은 칸을 벗어날 때(change)
+    return;
+  }
+  if (field === "rank") preset.rank = Number(el.value) || 1;
+  else if (field === "pieces") {
+    const [, , , zone, seat] = parts;
+    const list = preset.pieces[zone];
+    while (list.length <= Number(seat)) list.push("");
+    list[Number(seat)] = el.value;
+  } else if (field === "singles") {
+    const [, , , zone, idx, prop] = parts;
+    const list = preset.singles[zone];
+    const i = Number(idx);
+    while (list.length <= i) list.push({ main: "", sub: "" });
+    list[i] = { ...list[i], [prop]: el.value };
+    if (prop === "main" && !el.value) list[i].sub = "";
+  }
+  boardChanged();
+  if (field === "rank") rebuildEditorPages();
+}
+
+function handleBoardChange(event) {
+  const el = event.target;
+  if (el.dataset && el.dataset.boardField && /\.name$/.test(el.dataset.boardField)) rebuildEditorPages(); // 페이지 제목에 새 이름
+}
+
+function handleBoardClick(event) {
+  const button = event.target.closest("[data-board-action]");
+  if (!button || button.disabled) return;
+  const action = button.dataset.boardAction;
+  const presets = state.algorithm.board.presets;
+  const i = Number(button.dataset.boardIndex);
+  if (action === "open-add") {
+    boardAddOpen = !boardAddOpen;
+    drawBoardEditor();
+    return;
+  }
+  if (action === "add-rank" || action === "add-custom") {
+    if (presets.length >= BOARD_PRESET_MAX) return;
+    presets.push(newBoardPreset(action === "add-rank" ? "rank" : "custom", boardNextName()));
+    boardAddOpen = false;
+    boardChanged();
+    goBoardPreset(presets.length - 1);
+    return;
+  }
+  if (!(i > 0 && i < presets.length)) return;
+  if (action === "remove") {
+    if (!confirm(`「${boardPresetName(presets[i], i)}」 배치를 삭제할까요?`)) return;
+    presets.splice(i, 1);
+    boardChanged();
+    goBoardPreset(Math.min(i, presets.length - 1));
+    return;
+  }
+  const to = action === "up" ? i - 1 : i + 1;
+  if (to < 1 || to >= presets.length) return;
+  [presets[i], presets[to]] = [presets[to], presets[i]];
+  boardChanged();
+  goBoardPreset(to);
+}
+
 /* ---------- 7. 이벤트 연결 / 시작 ---------- */
 
 function refreshAll() {
+  boardClassDrawn = undefined; // 불러오기·초기화 뒤 배치 입력 새로
   applyBirthdayRules();
   drawAllLists();
   fillForm();
@@ -3245,6 +3729,8 @@ editorPanel.addEventListener("click", handleReviewClick);
 editorPanel.addEventListener("click", handleStatClick);
 editorPanel.addEventListener("click", handleEngravingClick);
 editorPanel.addEventListener("click", handleFoldAllClick);
+editorPanel.addEventListener("click", handleBoardClick);
+editorPanel.addEventListener("change", handleBoardChange);
 
 document.getElementById("resetButton").addEventListener("click", () => {
   if (!confirm("입력한 내용을 모두 지울까요?\n(저장하지 않은 내용은 되돌릴 수 없습니다)")) return;
@@ -3289,7 +3775,14 @@ const EDITOR_PARTS = [
       { key: "perf-review", title: "평가" },
     ],
   },
-  { key: "algorithm", title: "추천 알고리즘", pages: [{ key: "algorithm", title: "추천 알고리즘", sub: "algo" }] },
+  {
+    key: "algorithm",
+    title: "추천 알고리즘",
+    pages: [
+      { key: "algorithm", title: "추천 알고리즘", sub: "algo" },
+      { key: "algo-board", title: "알고리즘 배치", sub: "board" }, // 배치(프리셋)마다 한 페이지 (2칸 세트는 추천 알고리즘에서 연결)
+    ],
+  },
   {
     key: "intimacy",
     title: "친밀도",
@@ -3378,6 +3871,9 @@ function splitPageParts(pg) {
   }
   if (pg.sub === "skill") {
     return GAME_DATA.skillSlots.map((slot) => ({ id: `${pg.key}:${slot.key}`, title: `스킬 · ${slot.label}`, sub: { kind: "skill", key: slot.key } }));
+  }
+  if (pg.sub === "board") {
+    return getBoardPresets(state).map((preset, index) => ({ id: `${pg.key}:p${index}`, title: `알고리즘 배치 · ${boardPresetName(preset, index)}`, sub: { kind: "board", index } }));
   }
   if (pg.sub === "algo") {
     return ALGORITHM_TYPES.map((type, index) => ({ id: `${pg.key}:${type}`, title: GAME_DATA.algorithmType[type].label, sub: { kind: "algo", index } }));
@@ -3487,6 +3983,7 @@ function showEditorPage(index, { scroll = false } = {}) {
     const tools = box.closest(".form-group").querySelector(".story-tools");
     if (tools) tools.classList.toggle("is-off-page", on); // 모두 펼치기/접기는 일부 칸만 보일 때 필요 없음
   });
+  applyBoardSections(sub);
   // 스킬 (패시브·자동·궁극기 중 하나만, 펼쳐서)
   document.querySelectorAll("#skillEditor > .story-slot").forEach((block) => {
     const mine = sub.kind === "skill" && block.dataset.skillKey === sub.key;
